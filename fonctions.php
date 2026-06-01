@@ -50,4 +50,28 @@ function viderTout() {
     global $pdo;
     return $pdo->exec("TRUNCATE TABLE fiches_produits");
 }
+
+// Récupérer les recherches archivées
+function recupererArchives() {
+    global $pdo; 
+    
+    try {
+        $stmt = $pdo->query("SELECT * FROM fiches_produits WHERE archive = 1 ORDER BY date_creation DESC");
+
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    } catch (Exception $e) {
+        return []; // Retourne un tableau vide en cas d'erreur pour ne pas tout faire planter
+    }
+}
+
+// Désarchiver une recherche 
+function desarchiverRecherche($id) {
+    global $pdo;
+    try {
+        $stmt = $pdo->prepare("UPDATE fiches_produits SET archive = 0 WHERE id = ?");
+        return $stmt->execute([$id]);
+    } catch (Exception $e) {
+        return false;
+    }
+}
 ?>

@@ -1,8 +1,4 @@
 <?php
-ini_set('display_errors', 1);
-ini_set('display_startup_errors', 1);
-error_reporting(E_ALL);
-
 // Forcer PHP à ne pas couper le script, le temps qu'Ollama génère le texte
 set_time_limit(240); 
 ini_set('max_execution_time', 240);
@@ -13,6 +9,25 @@ require_once 'fonctions.php';
 if($_SERVER["REQUEST_METHOD"] === "POST" && !empty($_POST['produit'])){
     $nom = htmlspecialchars($_POST['produit']);
     $caract = htmlspecialchars($_POST['caract']);
+    $input_complet = $nom . " " . $caract;
+
+    // Liste d'insultes interdites
+    $interdits = [
+        'pute', 'salope', 'connard', 'connasse', 'enculé', 'enfoiré', 'merde', 'putain', 
+        'batard', 'nazi', 'suce', 'bite', 'couille', 'cul', 'chier', 'fdp', 'nique', 
+        'pédé', 'grosse', 'pouffe', 'abruti', 'degueulasse', 'ordure'
+    ];
+
+
+    foreach ($interdits as $mot) {
+        if (stripos($input_complet, $mot) !== false) {
+            echo json_encode([
+                'status' => 'error', 
+                'message' => 'Nous appliquons une politique de modération stricte : l\'utilisation d\'insultes ou de propos vulgaires n\'est pas autorisée. Veuillez reformuler votre demande.'
+            ]);
+            exit;
+        }
+    }
 
     // Vérification du cache (Évite de recalculer si la recherche est récente)
     $cacheExistential = verifierCache($nom, $caract);

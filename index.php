@@ -1,7 +1,13 @@
 <?php 
+ini_set('display_errors', 1);
+error_reporting(E_ALL);
+
 require_once 'fonctions.php'; 
 
+// Les recherches actives
 $recherches = recupererHistorique(); 
+// Les recherches archivées
+$archives = recupererArchives();
 ?>
 
 <!DOCTYPE html>
@@ -13,8 +19,7 @@ $recherches = recupererHistorique();
         <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
         <link rel="stylesheet" href="style.css">
-
-        <title>IA Search Engine</title>   
+        <title>IA Search Engine</title>           
     </head>
 
     <body class="p-5 bg-light">
@@ -25,6 +30,13 @@ $recherches = recupererHistorique();
 
         <div class="container">
             <h1 class="mb-4"><i class="fa-brands fa-searchengin"></i> IA Search Engine</h1>
+
+           <div class="alert alert-danger shadow-sm border-0 d-flex align-items-center" role="alert" style="border-left: 5px solid #ffc107;">
+                <i class="fa-solid fa-triangle-exclamation me-3" style="font-size: 1.5rem; color: #ffc107;"></i>
+                <div>
+                    Ce site est un site de démonstration, ayant pour objectif de présenter mes compétences en intégration d'IA.
+                </div>
+            </div>
             
             <div class="card p-4 mb-4 shadow-sm border-0">
                 <form id="searchForm" class="row g-3">
@@ -51,12 +63,18 @@ $recherches = recupererHistorique();
                 </div>
             </div>
 
-            <div class="d-flex justify-content-between align-items-center mb-4">
+           <div class="d-flex justify-content-between align-items-center mb-4">
                 <h3 id="view-title">Dernières recherches</h3>
 
-                <button id="toggle-view" class="btn btn-dark rounded-pill px-4 shadow-sm">
-                    <i class="fa-solid fa-table-list me-2"></i> Mode Exploration
-                </button>
+                <div>
+                    <button id="toggle-archives" class="btn btn-success rounded-pill px-4 shadow-sm me-2">
+                        <i class="fa-solid fa-eye me-2"></i> Recherches archivées
+                    </button>
+                    
+                    <button id="toggle-view" class="btn btn-dark rounded-pill px-4 shadow-sm">
+                        <i class="fa-solid fa-table-list me-2"></i> Mode Exploration
+                    </button>
+                </div>
             </div>
 
             <div id="section-apercu" class="row g-3">
@@ -136,6 +154,28 @@ $recherches = recupererHistorique();
                 </div>
             </div>
 
+            <div id="section-archives" class="hidden-section mt-4">                
+                <?php if (empty($archives)): ?>
+                    <div class="alert alert-info shadow-sm border-0 d-flex align-items-center mt-3" role="alert">
+                        <i class="fa-solid fa-circle-info me-3" style="font-size: 1.5rem;"></i>
+                        <div>Aucune recherche archivée pour le moment.</div>
+                    </div>
+                <?php else: ?>
+                    <div class="row g-3">
+                        <?php foreach ($archives as $fiche): ?>
+                            <div class="col-12">
+                                <div class="preview-item p-3 rounded-3 border border-warning d-flex justify-content-between align-items-center">
+                                    <h5><?php echo htmlspecialchars($fiche['nom_produit']); ?></h5>
+                                    <button class="btn btn-outline-success" onclick="desarchiver(<?php echo $fiche['id']; ?>)">
+                                        <i class="fa-solid fa-box-open"></i> Désarchiver
+                                    </button>
+                                </div>
+                            </div>
+                        <?php endforeach; ?>
+                    </div>
+                <?php endif; ?>
+            </div>
+
             <div class="text-center mt-5">
                 <button class="btn btn-link text-muted text-decoration-none small" onclick="confirmSuppr('supprimer_tout.php', true)">
                     <i class="fa-solid fa-power-off me-1"></i> Réinitialiser les recherches
@@ -187,18 +227,19 @@ $recherches = recupererHistorique();
                         </div>
                         <h3 class="fw-bold text-warning mb-2" style="font-size: 1.7rem;">Archivage</h3>
                         <p class="text-secondary px-2 mb-4" style="font-size: 0.95rem; line-height: 1.5;">
-                            Êtes-vous sûr de vouloir archiver cette recherche ? Elle sera retirée du flux principal.
+                            Êtes-vous sûr de vouloir archiver cette recherche ? Elle sera retirée des recherches actives.
                         </p>
                     </div>
                     <div class="d-flex justify-content-center gap-3 w-100">
                         <button type="button" class="btn swal-btn-cancel fw-semibold px-4 py-2" data-bs-dismiss="modal">Annuler</button>
-                        <button type="button" id="btn-confirm-archive" class="btn swal-btn-confirm fw-bold px-4 py-2">Confirmer l'archivage</button>
+                        <button type="submit" id="btn-confirm-archive" class="btn swal-btn-confirm fw-bold px-4 py-2">Confirmer l'archivage</button>
                     </div>
                 </div>
             </div>
         </div>
 
         <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+        <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
         <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
         <script>
             const toggleBtn = document.getElementById('toggle-view');
@@ -221,8 +262,9 @@ $recherches = recupererHistorique();
                 }
             });
 
-            // Gestion de l'affichage de la modale sans conflits de chaînes JS
+            // Affichage détaillé du résultat de la recherche
             const bModal = new bootstrap.Modal(document.getElementById('previewModal'));
+
             document.addEventListener('click', function(e) {
                 const btn = e.target.closest('.btn-voir-resultat');
                 if(btn) {
@@ -234,13 +276,16 @@ $recherches = recupererHistorique();
                 }
             });
 
+            // Suppression d'une recherche
             const supprModal = new bootstrap.Modal(document.getElementById('confirmDeleteModal'));
+
             function confirmSuppr(url, isGlobal = false) {
                 document.getElementById('btn-confirm-link').href = url;
                 document.getElementById('suppr-message').innerText = isGlobal ? "Voulez-vous vider toute la base de données ?" : "Êtes-vous sûr de vouloir supprimer cette recherche ?";
                 supprModal.show();
             }
 
+            // Le moteur de recherche
             document.getElementById('searchForm').addEventListener('submit', function(e) {
                 e.preventDefault();
                 const loader = document.getElementById('loader-overlay');
@@ -250,30 +295,38 @@ $recherches = recupererHistorique();
                 statusZone.innerHTML = '';
 
                 fetch('generer.php', { method: 'POST', body: new FormData(this) })
-                .then(res => {
-                    if(!res.ok) throw new Error("Erreur serveur");
-                    return res.text();
-                })
+                .then(res => res.json()) // On attend du JSON maintenant
                 .then(data => {
-                    statusZone.innerHTML = `
-                        <div class="alert alert-success alert-dismissible fade show shadow-sm border-0" role="alert">
-                            <i class="fa-solid fa-check-circle me-2"></i> 
-                            Recherche réussie ! La fiche a été ajoutée à l'historique.
-                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                        </div>`;
-                    
-                    this.reset();
-                    setTimeout(() => location.reload(), 1500); 
+                    if (data.status === 'error') {
+                        Swal.fire({
+                            icon: 'warning', 
+                            title: 'Attention',
+                            text: data.message, 
+                            confirmButtonColor: '#f39c12'
+                        });
+                    } else {
+                        // Succès : on affiche le message de succès puis on recharge
+                        statusZone.innerHTML = `
+                            <div class="alert alert-success shadow-sm border-0">
+                                <i class="fa-solid fa-check-circle me-2"></i> 
+                                Recherche réussie ! Mise à jour...
+                            </div>`;
+                        this.reset();
+                        setTimeout(() => location.reload(), 1000); 
+                    }
                 })
                 .catch(err => {
-                    statusZone.innerHTML = `<div class="alert alert-danger shadow-sm border-0"><i class="fa-solid fa-exclamation-triangle me-2"></i> ${err.message}</div>`;
+                    statusZone.innerHTML = `<div class="alert alert-danger shadow-sm border-0"><i class="fa-solid fa-exclamation-triangle me-2"></i> Erreur système.</div>`;
                 })
                 .finally(() => {
                     loader.style.display = 'none';
                 });
             });
 
+
+            // Archivage d'une recherche
             const archiveModal = new bootstrap.Modal(document.getElementById('confirmArchiveModal'));
+
             let idAArchiver = null;
             let boutonDeclencheur = null;
 
@@ -284,39 +337,85 @@ $recherches = recupererHistorique();
             }
 
             document.getElementById('btn-confirm-archive').addEventListener('click', function() {
-                if (!idAArchiver || !boutonDeclencheur) return;
+                if (idAArchiver && boutonDeclencheur) {
+                    let formData = new FormData();
+                    formData.append('id', idAArchiver);
 
-                const ligne = boutonDeclencheur.closest('.col-12');
-                archiveModal.hide();
-
-                fetch('archiver.php', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                    body: 'id=' + idAArchiver
-                })
-                .then(res => {
-                    if (!res.ok) throw new Error("Erreur lors de l'archivage");
-                    
-                    ligne.style.transition = "all 0.4s ease";
-                    ligne.style.opacity = "0";
-                    ligne.style.transform = "translateX(50px)";
-                    
-                    setTimeout(() => {
-                        ligne.remove();
-                        const statusZone = document.getElementById('ajax-status');
-                        statusZone.innerHTML = `
-                            <div class="alert alert-warning alert-dismissible fade show border-0 shadow-sm" role="alert">
-                                <i class="fa-solid fa-box-archive me-2"></i> Recherche archivée avec succès !
-                                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                            </div>`;
-                    }, 400);
-                })
-                .catch(err => alert(err.message))
-                .finally(() => {
-                    idAArchiver = null;
-                    boutonDeclencheur = null;
-                });
+                    fetch('archiver.php', {
+                        method: 'POST',
+                        body: formData
+                    })
+                    .then(response => response.json()) 
+                    .then(data => {
+                        archiveModal.hide(); 
+                        
+                        if (data && data.status === 'success') {
+                            const blocApercu = boutonDeclencheur.closest('.col-12');
+                            const ligneTableau = boutonDeclencheur.closest('tr');
+                            
+                            if (blocApercu) blocApercu.remove();
+                            if (ligneTableau) ligneTableau.remove();
+                        } else {
+                            console.error("Erreur serveur :", data);
+                        }
+                    })
+                    .catch(err => {
+                        archiveModal.hide();
+                        console.error("Erreur réseau :", err);
+                    });
+                }
             });
+
+           document.getElementById('toggle-archives').addEventListener('click', function() {
+                const sectionActives = document.getElementById('section-apercu');
+                const sectionExplo = document.getElementById('section-exploration');
+                const sectionArchives = document.getElementById('section-archives');
+                const viewTitle = document.getElementById('view-title');
+
+                // On définit l'état : si les archives sont cachées, on veut les afficher
+                const showArchives = sectionArchives.classList.contains('hidden-section');
+
+                if (showArchives) {
+                    // Afficher les archives, cacher le reste
+                    sectionArchives.classList.remove('hidden-section');
+                    sectionActives.classList.add('hidden-section');
+                    sectionExplo.classList.add('hidden-section');
+                    
+                    viewTitle.innerText = "Recherches archivées";
+                    this.innerHTML = "<i class='fa-solid fa-clock-rotate-left me-2'></i> Recherches actives";
+                } else {
+                    // Revenir aux actives (mode aperçu par défaut)
+                    sectionArchives.classList.add('hidden-section');
+                    sectionActives.classList.remove('hidden-section');
+                    
+                    viewTitle.innerText = "Dernières recherches";
+                    this.innerHTML = "<i class='fa-solid fa-eye me-2'></i> Recherches archivées";
+                }
+            });
+            
+            // Désarchivage d'une recherche
+            function desarchiver(id) {
+                let formData = new FormData();
+                formData.append('id', id);
+
+                fetch('desarchiver.php', {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(response => response.json()) // On convertit bien la réponse en JSON
+                .then(data => {
+                    if (data.status === 'success') {
+                        // Succès : on rafraîchit
+                        location.reload(); 
+                    } else {
+                        console.warn("Le serveur a répondu, mais pas avec le succès attendu :", data);
+                    }
+                })
+                .catch(err => {
+                    // C'est ici que l'erreur 404 ou réseau serait capturée
+                    console.error("Erreur critique lors de la connexion au serveur :", err);
+                });
+            }
 
             function debounce(fonctionAExecuter, delaiEnMs) {
                 let minuteur; 
@@ -344,6 +443,7 @@ $recherches = recupererHistorique();
             }
 
             document.getElementById('filterInput').addEventListener('keyup', debounce(filtrerTableau, 300));
+            
         </script>
     </body>
 </html>
