@@ -7,7 +7,8 @@ define('DB_PASS', 'Ib2SwjmiZ7Kh0rJ3XNsh');
 
 // Configuration de l'API Ollama (Local)
 define('API_URL', 'http://127.0.0.1:11434/api/generate');
-define('AI_MODEL', 'llama3.2:3b');
+// Version plus rapide de l'IA
+define('AI_MODEL', 'llama3.2:1b');
 
 try {
     // Passage en utf8mb4 pour supporter tous les caractères générés par l'IA

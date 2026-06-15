@@ -91,6 +91,15 @@ $archives = recupererArchives();
                                      IA ENGINE
                                 </span>
                                 <span class="badge text-bg-success"><i class="fa-regular fa-clock me-1"></i> <?php echo $dateFr; ?></span>
+
+                                <span class="badge <?php echo ($fiche['fiabilite'] > 70) ? 'bg-primary' : 'bg-warning'; ?> shadow-sm">
+                                    <i class="fa-solid fa-gauge-high"></i> Fiabilité : <?php echo $fiche['fiabilite']; ?>%
+                                </span>
+                                
+                                <button class="btn btn-sm btn-link text-decoration-none" 
+                                        data-bs-toggle="tooltip" title="<?php echo htmlspecialchars($fiche['incertitude']); ?>">
+                                    <i class="fa-solid fa-circle-question text-muted"></i>
+                                </button>
                             </div>
 
                             <div class="d-flex gap-2 align-items-center">
@@ -104,7 +113,11 @@ $archives = recupererArchives();
 
                                 <button class="btn btn-outline-primary btn-voir-resultat" 
                                         data-nom="<?php echo htmlspecialchars($fiche['nom_produit'], ENT_QUOTES, 'UTF-8'); ?>"
-                                        data-description="<?php echo htmlspecialchars($fiche['description_ia'], ENT_QUOTES, 'UTF-8'); ?>">
+                                        data-description="<?php 
+                                            // On concatène la description, le séparateur, et le résumé
+                                            // Assure-toi que la clé 'resume' existe bien dans ton tableau $fiche
+                                            echo htmlspecialchars($fiche['description_ia'] . '[RESUME]' . $fiche['resume'], ENT_QUOTES, 'UTF-8'); 
+                                        ?>">
                                     <i class="fa-solid fa-eye me-1"></i> Voir le résultat
                                 </button>
                             </div>
@@ -130,8 +143,18 @@ $archives = recupererArchives();
                                 <tr>
                                     <td class="fw-bold" style="width: 15%;"><?php echo htmlspecialchars($donnees['nom_produit']); ?></td>
 
-                                    <td class="description-cell py-3">
-                                        <div class="md-render-direct"><?php echo htmlspecialchars($donnees['description_ia']); ?></div>
+                                   <td class="description-cell py-3">
+                                        <div class="md-render-direct mb-3">
+                                            <?php echo htmlspecialchars($donnees['resume']); ?>
+                                        </div>
+
+                                        <div class="d-flex justify-content-end">
+                                            <button class="btn btn-outline-primary btn-voir-resultat" 
+                                                    data-nom="<?php echo htmlspecialchars($donnees['nom_produit'], ENT_QUOTES, 'UTF-8'); ?>"
+                                                    data-description="<?php echo htmlspecialchars($donnees['description_ia'], ENT_QUOTES, 'UTF-8'); ?>">
+                                                <i class="fa-solid fa-eye me-1"></i> Voir plus
+                                            </button>
+                                        </div>
                                     </td>
 
                                     <td style="width: 15%;">
@@ -181,6 +204,11 @@ $archives = recupererArchives();
                     <i class="fa-solid fa-power-off me-1"></i> Réinitialiser les recherches
                 </button>
             </div>
+
+            <button id="backToTop" class="btn btn-primary rounded-circle shadow" 
+                    style="position: fixed; bottom: 30px; right: 30px; display: none; z-index: 9999;">
+                <i class="fa-solid fa-arrow-up"></i>
+            </button>
         </div>
 
         <div class="modal fade swal-bootstrap-modal" id="previewModal" tabindex="-1" aria-hidden="true">
@@ -194,6 +222,16 @@ $archives = recupererArchives();
                         <div id="modal-description" class="md-render text-start p-4 rounded-3 mb-4" style="background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.05); max-height: 400px; overflow-y: auto;"></div>
                     </div>
                     <div class="d-flex justify-content-center w-100">
+                        <button type="button" class="btn btn-outline-black fw-bold px-4 py-2 btn-voir-resume" onclick="copierTexte()">
+                            <i class="fa-solid fa-copy me-1"></i> Copier
+                        </button>
+
+                        <button type="button" class="btn btn-sm btn-info text-light btn-generer-resume" id="btn-generer-resume">
+                            <i class="fa-solid fa-bolt"></i> Résumé
+                        </button>
+
+                        &nbsp;
+
                         <button type="button" class="btn swal-btn-close fw-bold px-5 py-2" data-bs-dismiss="modal">Fermer l'aperçu</button>
                     </div>
                 </div>
@@ -237,6 +275,25 @@ $archives = recupererArchives();
                 </div>
             </div>
         </div>
+        
+        <div class="modal fade" id="modalDescription<?php echo $donnees['id']; ?>" tabindex="-1" aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Détails</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <?php echo htmlspecialchars($donnees['description']); ?>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="resumeModal" class="mt-3" style="display:none;">
+            <h6>Résumé</h6>
+            <div id="modal-resume-result" class="p-2 bg-light border rounded"></div>
+        </div>
 
         <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
         <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
@@ -262,19 +319,41 @@ $archives = recupererArchives();
                 }
             });
 
-            // Affichage détaillé du résultat de la recherche
             const bModal = new bootstrap.Modal(document.getElementById('previewModal'));
 
-            document.addEventListener('click', function(e) {
-                const btn = e.target.closest('.btn-voir-resultat');
-                if(btn) {
-                    const name = btn.getAttribute('data-nom');
-                    const content = btn.getAttribute('data-description');
-                    document.getElementById('modal-product-name').innerText = name;
-                    document.getElementById('modal-description').innerHTML = marked.parse(content);
-                    bModal.show();
-                }
-            });
+    // Gestion du clic sur "Voir le résultat"
+    document.addEventListener('click', function(e) {
+        const btn = e.target.closest('.btn-voir-resultat');
+        if (btn) {
+            const rawContent = btn.getAttribute('data-description');
+            
+            // DEBUG : Affiche le texte complet dans la console
+            console.log("Texte brut reçu par le JS :", rawContent);
+
+            if (!rawContent || !rawContent.includes('[RESUME]')) {
+                console.error("ERREUR : La chaîne [RESUME] est absente du texte !");
+                window.currentDesc = rawContent;
+                window.currentResume = "Aucun résumé disponible (balise [RESUME] introuvable).";
+            } else {
+                const parts = rawContent.split('[RESUME]');
+                window.currentDesc = parts[0] ? parts[0].trim() : "Aucune description.";
+                window.currentResume = parts[1] ? parts[1].trim() : "Résumé vide.";
+            }
+
+            document.getElementById('modal-product-name').innerText = btn.getAttribute('data-nom');
+            document.getElementById('modal-description').innerHTML = marked.parse(window.currentDesc);
+            
+            bModal.show();
+        }
+    });
+
+    // Gestion du clic sur le bouton "Résumé" DANS la modale
+    document.getElementById('btn-generer-resume').addEventListener('click', function() {
+        const modalDesc = document.getElementById('modal-description');
+        if (modalDesc && window.currentResume) {
+            modalDesc.innerHTML = marked.parse(window.currentResume);
+        }
+    });
 
             // Suppression d'une recherche
             const supprModal = new bootstrap.Modal(document.getElementById('confirmDeleteModal'));
@@ -283,7 +362,7 @@ $archives = recupererArchives();
                 document.getElementById('btn-confirm-link').href = url;
                 document.getElementById('suppr-message').innerText = isGlobal ? "Voulez-vous vider toute la base de données ?" : "Êtes-vous sûr de vouloir supprimer cette recherche ?";
                 supprModal.show();
-            }
+            }           
 
             // Le moteur de recherche
             document.getElementById('searchForm').addEventListener('submit', function(e) {
@@ -294,35 +373,38 @@ $archives = recupererArchives();
                 loader.style.display = 'flex';
                 statusZone.innerHTML = '';
 
-                fetch('generer.php', { method: 'POST', body: new FormData(this) })
-                .then(res => res.json()) // On attend du JSON maintenant
+                fetch('generer.php', { 
+                    method: 'POST', 
+                    body: new FormData(this) 
+                })
+                .then(res => res.json())
                 .then(data => {
                     if (data.status === 'error') {
+                        // Affichage de l'erreur via SweetAlert
                         Swal.fire({
                             icon: 'warning', 
                             title: 'Attention',
                             text: data.message, 
                             confirmButtonColor: '#f39c12'
                         });
+                        loader.style.display = 'none'; 
                     } else {
-                        // Succès : on affiche le message de succès puis on recharge
+                        // Succès : on affiche le message de succès puis on recharge la page
                         statusZone.innerHTML = `
                             <div class="alert alert-success shadow-sm border-0">
                                 <i class="fa-solid fa-check-circle me-2"></i> 
                                 Recherche réussie ! Mise à jour...
                             </div>`;
                         this.reset();
-                        setTimeout(() => location.reload(), 1000); 
+                        // Le rechargement permet de rafraîchir la liste via PHP
+                        location.reload(); 
                     }
                 })
                 .catch(err => {
                     statusZone.innerHTML = `<div class="alert alert-danger shadow-sm border-0"><i class="fa-solid fa-exclamation-triangle me-2"></i> Erreur système.</div>`;
-                })
-                .finally(() => {
                     loader.style.display = 'none';
                 });
-            });
-
+            });           
 
             // Archivage d'une recherche
             const archiveModal = new bootstrap.Modal(document.getElementById('confirmArchiveModal'));
@@ -337,59 +419,105 @@ $archives = recupererArchives();
             }
 
             document.getElementById('btn-confirm-archive').addEventListener('click', function() {
-                if (idAArchiver && boutonDeclencheur) {
-                    let formData = new FormData();
-                    formData.append('id', idAArchiver);
+                if (!idAArchiver) return;
 
-                    fetch('archiver.php', {
-                        method: 'POST',
-                        body: formData
-                    })
-                    .then(response => response.json()) 
-                    .then(data => {
-                        archiveModal.hide(); 
-                        
-                        if (data && data.status === 'success') {
-                            const blocApercu = boutonDeclencheur.closest('.col-12');
-                            const ligneTableau = boutonDeclencheur.closest('tr');
-                            
-                            if (blocApercu) blocApercu.remove();
-                            if (ligneTableau) ligneTableau.remove();
-                        } else {
-                            console.error("Erreur serveur :", data);
-                        }
-                    })
-                    .catch(err => {
-                        archiveModal.hide();
-                        console.error("Erreur réseau :", err);
-                    });
+                let formData = new FormData();
+                formData.append('id', idAArchiver);
+
+                fetch('archiver.php', {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(response => response.json())
+                .then(data => {
+                    archiveModal.hide();
+
+                    if (data && data.status === 'success') {
+                        const elApercu = document.querySelector(`.col-12[data-id="${idAArchiver}"]`);
+                        const elTableau = document.querySelector(`tr[data-id="${idAArchiver}"]`);
+
+                        // On définit le délai pour l'animation
+                        const delai = 300; 
+
+                        const supprimer = (el) => {
+                            if (el) {
+                                el.style.transition = `opacity ${delai}ms ease`;
+                                el.style.opacity = "0";
+                            }
+                        };
+
+                        supprimer(elApercu);
+                        supprimer(elTableau);
+
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'Recherche archivée',
+                            toast: true,
+                            position: 'top-end',
+                            showConfirmButton: false,
+                            timer: 2000,
+                            didClose: () => {
+                                // S'exécute quand l'alerte se ferme
+                                location.reload();
+                            }
+                        });
+                    } else {
+                        console.error("Erreur serveur :", data);
+                        location.reload(); 
+                    }
+                })
+                .catch(err => {
+                    archiveModal.hide();
+                    console.error("Erreur :", err);
+                    location.reload();
+                });
+            });
+                    
+            let modeExplorationActif = false;
+
+            // Bouton "Recherches Archivées"
+            document.getElementById('toggle-archives').addEventListener('click', function() {
+                const sArchives = document.getElementById('section-archives');
+                const sApercu = document.getElementById('section-apercu');
+                const sExplo = document.getElementById('section-exploration');
+
+                sArchives.classList.toggle('hidden-section');
+
+                if (!sArchives.classList.contains('hidden-section')) {
+                    // Ouverture des archives : on masque tout le reste
+                    sApercu.classList.add('hidden-section');
+                    sExplo.classList.add('hidden-section');
+                } else {
+                    // Fermeture des archives : on rétablit la vue précédente
+                    if (modeExplorationActif) {
+                        sExplo.classList.remove('hidden-section');
+                    } else {
+                        sApercu.classList.remove('hidden-section');
+                    }
                 }
             });
 
-           document.getElementById('toggle-archives').addEventListener('click', function() {
-                const sectionActives = document.getElementById('section-apercu');
-                const sectionExplo = document.getElementById('section-exploration');
-                const sectionArchives = document.getElementById('section-archives');
-                const viewTitle = document.getElementById('view-title');
+            // Bouton "Mode Exploration"
+            document.getElementById('toggle-view').addEventListener('click', function() {
+                const sApercu = document.getElementById('section-apercu');
+                const sExplo = document.getElementById('section-exploration');
+                const sArchives = document.getElementById('section-archives');
 
-                // On définit l'état : si les archives sont cachées, on veut les afficher
-                const showArchives = sectionArchives.classList.contains('hidden-section');
+                // On s'assure que les archives sont fermées
+                sArchives.classList.add('hidden-section');
 
-                if (showArchives) {
-                    // Afficher les archives, cacher le reste
-                    sectionArchives.classList.remove('hidden-section');
-                    sectionActives.classList.add('hidden-section');
-                    sectionExplo.classList.add('hidden-section');
-                    
-                    viewTitle.innerText = "Recherches archivées";
-                    this.innerHTML = "<i class='fa-solid fa-clock-rotate-left me-2'></i> Recherches actives";
+                // Bascule l'état
+                modeExplorationActif = !modeExplorationActif;
+
+                // Mise à jour de la visibilité
+                if (modeExplorationActif) {
+                    sApercu.classList.add('hidden-section');
+                    sExplo.classList.remove('hidden-section');
+                    this.innerHTML = "<i class='fa-solid fa-compress me-2'></i> Mode Aperçu";
                 } else {
-                    // Revenir aux actives (mode aperçu par défaut)
-                    sectionArchives.classList.add('hidden-section');
-                    sectionActives.classList.remove('hidden-section');
-                    
-                    viewTitle.innerText = "Dernières recherches";
-                    this.innerHTML = "<i class='fa-solid fa-eye me-2'></i> Recherches archivées";
+                    sApercu.classList.remove('hidden-section');
+                    sExplo.classList.add('hidden-section');
+                    this.innerHTML = "<i class='fa-solid fa-table-list me-2'></i> Mode Exploration";
                 }
             });
             
@@ -402,17 +530,28 @@ $archives = recupererArchives();
                     method: 'POST',
                     body: formData
                 })
-                .then(response => response.json()) // On convertit bien la réponse en JSON
+                .then(response => response.json())
                 .then(data => {
                     if (data.status === 'success') {
-                        // Succès : on rafraîchit
-                        location.reload(); 
+                        // On lance l'alerte
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'Recherche désarchivée',
+                            toast: true,
+                            position: 'top-end',
+                            showConfirmButton: false,
+                            timer: 2000,
+                            didClose: () => {
+                                // S'exécute quand l'alerte se ferme
+                                location.reload();
+                            }
+                        });
+
                     } else {
                         console.warn("Le serveur a répondu, mais pas avec le succès attendu :", data);
                     }
                 })
                 .catch(err => {
-                    // C'est ici que l'erreur 404 ou réseau serait capturée
                     console.error("Erreur critique lors de la connexion au serveur :", err);
                 });
             }
@@ -444,6 +583,28 @@ $archives = recupererArchives();
 
             document.getElementById('filterInput').addEventListener('keyup', debounce(filtrerTableau, 300));
             
+            function copierTexte() {
+                const texteACopier = document.getElementById('modal-description').innerText;
+                navigator.clipboard.writeText(texteACopier).then(() => {
+                    // Optionnel : un petit feedback visuel avec SweetAlert
+                    Swal.fire({
+                        toast: true,
+                        position: 'top-end',
+                        icon: 'success',
+                        title: 'Copié dans le presse-papier',
+                        showConfirmButton: false,
+                        timer: 1500
+                    });
+                });
+            }
+
+            const content = btn.getAttribute('data-description');
+            const parts = content.split('[RESUME]');
+            const description = parts[0];
+            const resume = parts[1] || "Aucun résumé disponible.";
+
+            document.getElementById('modal-description').innerHTML = marked.parse(description);
+            document.getElementById('modal-resume-text').innerHTML = marked.parse(resume);
         </script>
     </body>
 </html>

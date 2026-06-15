@@ -1,7 +1,6 @@
 <?php
 require_once 'config.php';
 
-
 // Récupère les fiches des recherches de la base de données
 function recupererHistorique($limite = null) {
     global $pdo;
@@ -15,7 +14,7 @@ function recupererHistorique($limite = null) {
     return $query->fetchAll();
 }
 
-// Cérification du cache (Évite d'appeler l'API inutilement si la recherche est récente)
+// Vérification du cache
 function verifierCache($nom_produit, $caract) {
     global $pdo;
     $stmt = $pdo->prepare("
@@ -31,11 +30,15 @@ function verifierCache($nom_produit, $caract) {
     return $resultat ? $resultat['description_ia'] : null;
 }
 
-// Sauvegarde de la nouvelle recherche en BDD
-function sauvegarderRecherche($nom_produit, $caract, $description_ia) {
+// Sauvegarde de la nouvelle recherche en BDD avec les nouveaux champs
+function sauvegarderRecherche($nom_produit, $caract, $description_ia, $resume, $fiabilite, $incertitude) {
     global $pdo;
-    $stmt = $pdo->prepare("INSERT INTO fiches_produits (nom_produit, caract_cle, description_ia, archive) VALUES (?, ?, ?, 0)");
-    $stmt->execute([$nom_produit, $caract, $description_ia]);
+    $stmt = $pdo->prepare("
+        INSERT INTO fiches_produits 
+        (nom_produit, caract_cle, description_ia, resume, fiabilite, incertitude, archive) 
+        VALUES (?, ?, ?, ?, ?, ?, 0)
+    ");
+    $stmt->execute([$nom_produit, $caract, $description_ia, $resume, $fiabilite, $incertitude]);
 }
 
 // Supprime une fiche de recherche par son ID
@@ -54,13 +57,11 @@ function viderTout() {
 // Récupérer les recherches archivées
 function recupererArchives() {
     global $pdo; 
-    
     try {
         $stmt = $pdo->query("SELECT * FROM fiches_produits WHERE archive = 1 ORDER BY date_creation DESC");
-
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     } catch (Exception $e) {
-        return []; // Retourne un tableau vide en cas d'erreur pour ne pas tout faire planter
+        return [];
     }
 }
 
