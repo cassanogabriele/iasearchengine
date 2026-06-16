@@ -1,4 +1,6 @@
 <?php
+$start_time = microtime(true);
+
 set_time_limit(240); 
 header('Content-Type: application/json');
 
@@ -49,10 +51,23 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && !empty($_POST['produit'])) {
         $description = $data_ia['DESCRIPTION'] ?? "Pas de description.";
         $fiabilite = (int)($data_ia['FIABILITE'] ?? 0);
         $incertitude = $data_ia['INCERTITUDE'] ?? "Aucune";
-
-        sauvegarderRecherche($nom, $caract, $description, $resume, $fiabilite, $incertitude);
         
-        echo json_encode(['status' => 'success', 'resume' => $resume, 'description' => $description, 'fiabilite' => $fiabilite, 'incertitude' => $incertitude]);
+        $end_time = microtime(true);
+        $execution_time = round(($end_time - $start_time) * 1000); // en ms
+        // Estimation : 1 mot ≈ 1.3 tokens (très couramment utilisé pour les estimations rapides)
+        $token_count = round(str_word_count($resume . $description) * 1.3);
+
+       sauvegarderRecherche($nom, $caract, $description, $resume, $fiabilite, $incertitude, $execution_time, $token_count);
+        
+        echo json_encode([
+            'status' => 'success', 
+            'resume' => $resume, 
+            'description' => $description, 
+            'fiabilite' => $fiabilite, 
+            'incertitude' => $incertitude,
+            'execution_time' => $execution_time,
+            'token_count' => $token_count
+        ]);
     } else {
         echo json_encode(['status' => 'error', 'message' => 'Le JSON est mal formé.', 'raw' => $json_str]);
     }

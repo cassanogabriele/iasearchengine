@@ -31,14 +31,23 @@ function verifierCache($nom_produit, $caract) {
 }
 
 // Sauvegarde de la nouvelle recherche en BDD avec les nouveaux champs
-function sauvegarderRecherche($nom_produit, $caract, $description_ia, $resume, $fiabilite, $incertitude) {
+function sauvegarderRecherche($nom_produit, $caract, $description_ia, $resume, $fiabilite, $incertitude, $execution_time = 0, $token_count = 0) {
     global $pdo;
     $stmt = $pdo->prepare("
         INSERT INTO fiches_produits 
-        (nom_produit, caract_cle, description_ia, resume, fiabilite, incertitude, archive) 
-        VALUES (?, ?, ?, ?, ?, ?, 0)
+        (nom_produit, caract_cle, description_ia, resume, fiabilite, incertitude, execution_time, token_count, archive) 
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0)
     ");
-    $stmt->execute([$nom_produit, $caract, $description_ia, $resume, $fiabilite, $incertitude]);
+    $stmt->execute([
+        $nom_produit, 
+        $caract, 
+        $description_ia, 
+        $resume, 
+        $fiabilite, 
+        $incertitude, 
+        $execution_time, 
+        $token_count
+    ]);
 }
 
 // Supprime une fiche de recherche par son ID

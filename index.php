@@ -112,12 +112,11 @@ $archives = recupererArchives();
                                 </button>
 
                                 <button class="btn btn-outline-primary btn-voir-resultat" 
-                                        data-nom="<?php echo htmlspecialchars($fiche['nom_produit'], ENT_QUOTES, 'UTF-8'); ?>"
-                                        data-description="<?php 
-                                            // On concatène la description, le séparateur, et le résumé
-                                            // Assure-toi que la clé 'resume' existe bien dans ton tableau $fiche
-                                            echo htmlspecialchars($fiche['description_ia'] . '[RESUME]' . $fiche['resume'], ENT_QUOTES, 'UTF-8'); 
-                                        ?>">
+                                    data-nom="<?php echo htmlspecialchars($fiche['nom_produit'], ENT_QUOTES, 'UTF-8'); ?>"
+                                    data-description="<?php echo htmlspecialchars($fiche['description_ia'], ENT_QUOTES, 'UTF-8'); ?>"
+                                    data-resume="<?php echo htmlspecialchars($fiche['resume'], ENT_QUOTES, 'UTF-8'); ?>"
+                                    data-time="<?php echo (int)$fiche['execution_time']; ?>"
+                                    data-tokens="<?php echo (int)$fiche['token_count']; ?>">
                                     <i class="fa-solid fa-eye me-1"></i> Voir le résultat
                                 </button>
                             </div>
@@ -219,20 +218,35 @@ $archives = recupererArchives();
                             <i class="fa-solid fa-brain"></i>
                         </div>
                         <h3 class="fw-bold text-white mb-3" id="modal-product-name" style="font-size: 1.8rem;"></h3>
-                        <div id="modal-description" class="md-render text-start p-4 rounded-3 mb-4" style="background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.05); max-height: 400px; overflow-y: auto;"></div>
+                        
+                        <div id="modal-description" class="md-render text-start p-4 rounded-3 mb-4" style="background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.05); max-height: 300px; overflow-y: auto;"></div>
+                        
+                        <div id="resume-container" class="text-start mb-4 p-3 rounded" style="background: rgba(0, 0, 0, 0.2); border-left: 4px solid #0dcaf0; display: none;">
+                            <h6 class="text-info"><i class="fa-solid fa-bolt me-2"></i>Résumé IA</h6>
+                            <div id="modal-resume-result" style="font-size: 0.95rem;"></div>
+                        </div>
                     </div>
-                    <div class="d-flex justify-content-center w-100">
-                        <button type="button" class="btn btn-outline-black fw-bold px-4 py-2 btn-voir-resume" onclick="copierTexte()">
+
+                    <div class="d-flex justify-content-center w-100 mb-4">
+                        <button type="button" class="btn btn-outline-light fw-bold px-4 py-2 me-2 text-black" onclick="copierTexte()">
                             <i class="fa-solid fa-copy me-1"></i> Copier
                         </button>
 
-                        <button type="button" class="btn btn-sm btn-info text-light btn-generer-resume" id="btn-generer-resume">
-                            <i class="fa-solid fa-bolt"></i> Résumé
+                        <button type="button" class="btn btn-sm btn-info text-light px-4 py-2 me-2" id="btn-generer-resume">
+                            <i class="fa-solid fa-wand-magic-sparkles me-1"></i> Résumé
                         </button>
 
-                        &nbsp;
+                        <button type="button" class="btn swal-btn-close fw-bold px-5 py-2" data-bs-dismiss="modal">Fermer</button>
+                    </div>
 
-                        <button type="button" class="btn swal-btn-close fw-bold px-5 py-2" data-bs-dismiss="modal">Fermer l'aperçu</button>
+                    <div id="metrics-console" class="p-3 bg-dark border border-secondary rounded shadow-sm font-monospace text-start" style="font-size: 0.75rem; color: #00ff41;">
+                        <div class="d-flex justify-content-between">
+                            <span><i class="fa-solid fa-microchip me-1"></i>Status : <span id="api-status"></span></span>
+                            <span><i class="fa-solid fa-clock me-1"></i>Latence: <span id="gen-time"><?php echo $donnees['execution_time']; ?> ms</span>
+                        </div>
+                        <div class="mt-1">
+                            <span><i class="fa-solid fa-font me-1"></i>Tokens: <span id="token-count"><?php echo $donnees['token_count']; ?></span>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -320,40 +334,60 @@ $archives = recupererArchives();
             });
 
             const bModal = new bootstrap.Modal(document.getElementById('previewModal'));
+            const btnAction = document.getElementById('btn-generer-resume'); // Ton bouton dans la modale
 
-    // Gestion du clic sur "Voir le résultat"
-    document.addEventListener('click', function(e) {
-        const btn = e.target.closest('.btn-voir-resultat');
-        if (btn) {
-            const rawContent = btn.getAttribute('data-description');
-            
-            // DEBUG : Affiche le texte complet dans la console
-            console.log("Texte brut reçu par le JS :", rawContent);
+            document.querySelectorAll('.btn-voir-resultat').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    // 1. Récupération des données depuis les attributs data-*
+                    const nom = this.getAttribute('data-nom');
+                    const desc = this.getAttribute('data-description');
+                    const resume = this.getAttribute('data-resume');
+                    const time = this.getAttribute('data-time');
+                    const tokens = this.getAttribute('data-tokens');
 
-            if (!rawContent || !rawContent.includes('[RESUME]')) {
-                console.error("ERREUR : La chaîne [RESUME] est absente du texte !");
-                window.currentDesc = rawContent;
-                window.currentResume = "Aucun résumé disponible (balise [RESUME] introuvable).";
-            } else {
-                const parts = rawContent.split('[RESUME]');
-                window.currentDesc = parts[0] ? parts[0].trim() : "Aucune description.";
-                window.currentResume = parts[1] ? parts[1].trim() : "Résumé vide.";
-            }
+                    // 2. Injection des contenus
+                    document.getElementById('modal-product-name').innerText = nom;
+                    document.getElementById('modal-description').innerHTML = desc;
+                    
+                    // Gestion du résumé (si vide, on cache le bloc)
+                    const resumeContainer = document.getElementById('resume-container');
+                    const resumeResult = document.getElementById('modal-resume-result');
+                    
+                    if (resume && resume.trim() !== "") {
+                        resumeResult.innerHTML = resume;
+                        resumeContainer.style.display = 'block';
+                    } else {
+                        resumeContainer.style.display = 'none';
+                    }
 
-            document.getElementById('modal-product-name').innerText = btn.getAttribute('data-nom');
-            document.getElementById('modal-description').innerHTML = marked.parse(window.currentDesc);
-            
-            bModal.show();
-        }
-    });
+                    // 3. Mise à jour de la console technique (Monitoring)
+                    document.getElementById('gen-time').innerText = time + ' ms';
+                    document.getElementById('token-count').innerText = tokens;
+                    const statusEl = document.getElementById('api-status');
+                    statusEl.innerText = 'LOADED_FROM_DB';
+                    statusEl.style.color = '#00ff41';
 
-    // Gestion du clic sur le bouton "Résumé" DANS la modale
-    document.getElementById('btn-generer-resume').addEventListener('click', function() {
-        const modalDesc = document.getElementById('modal-description');
-        if (modalDesc && window.currentResume) {
-            modalDesc.innerHTML = marked.parse(window.currentResume);
-        }
-    });
+                    // 4. Ouverture
+                    new bootstrap.Modal(document.getElementById('previewModal')).show();
+                });
+            });
+
+            // Gestion du basculement (toggle)
+            btnAction.addEventListener('click', function() {
+                const modalDesc = document.getElementById('modal-description');
+                
+                if (this.dataset.state === "description") {
+                    // Passer au résumé
+                    modalDesc.innerHTML = marked.parse(window.currentResume);
+                    this.innerText = "Description complète";
+                    this.dataset.state = "resume";
+                } else {
+                    // Revenir à la description
+                    modalDesc.innerHTML = marked.parse(window.currentDesc);
+                    this.innerText = "Résumé";
+                    this.dataset.state = "description";
+                }
+            });
 
             // Suppression d'une recherche
             const supprModal = new bootstrap.Modal(document.getElementById('confirmDeleteModal'));
@@ -605,6 +639,20 @@ $archives = recupererArchives();
 
             document.getElementById('modal-description').innerHTML = marked.parse(description);
             document.getElementById('modal-resume-text').innerHTML = marked.parse(resume);
+
+            function updateMetrics(data) {
+                // 1. Statut API
+                const statusEl = document.getElementById('api-status');
+                statusEl.innerText = data.success ? 'CONNECTED' : 'ERROR';
+                statusEl.style.color = data.success ? '#00ff41' : '#ff4d4d';
+
+                // 2. Temps de génération
+                document.getElementById('gen-time').innerText = data.execution_time || '0';
+
+                // 3. Calcul simple des tokens (approximatif : 1 mot ≈ 0.75 token)
+                const wordCount = data.content.split(' ').length;
+                document.getElementById('token-count').innerText = Math.round(wordCount * 1.3);
+            }
         </script>
     </body>
 </html>
