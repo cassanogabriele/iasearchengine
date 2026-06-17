@@ -8,6 +8,16 @@ require_once 'fonctions.php';
 $recherches = recupererHistorique(); 
 // Les recherches archivées
 $archives = recupererArchives();
+
+// Configuration de la pagination
+$page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
+$parPage = 4; // ON CHANGE ICI : 4 éléments au lieu de 5
+$totalRecherches = count($recherches);
+$nombreDePages = ceil($totalRecherches / $parPage);
+$offset = ($page - 1) * $parPage;
+
+// On récupère uniquement la tranche pour la page actuelle
+$recherchesPaginees = array_slice($recherches, $offset, $parPage);
 ?>
 
 <!DOCTYPE html>
@@ -67,6 +77,10 @@ $archives = recupererArchives();
                 <h3 id="view-title">Dernières recherches</h3>
 
                 <div>
+                   <button class="btn btn-warning rounded-pill px-4 shadow-sm" onclick="lancerComparaisonIA()">
+                        <i class="fa-solid fa-code-compare me-2"></i> Comparer 
+                    </button>
+
                     <button id="toggle-archives" class="btn btn-success rounded-pill px-4 shadow-sm me-2">
                         <i class="fa-solid fa-eye me-2"></i> Recherches archivées
                     </button>
@@ -79,25 +93,28 @@ $archives = recupererArchives();
 
             <div id="section-apercu" class="row g-3">
                 <?php 
-                $derniers = array_slice($recherches, 0, 5);
-                foreach ($derniers as $fiche): 
+                foreach ($recherchesPaginees as $fiche): 
                     $dateFr = date('d/m/Y H:i', strtotime($fiche['date_creation']));
                 ?>
+
                     <div class="col-12">
                         <div class="preview-item p-3 rounded-3 d-flex justify-content-between align-items-center">
-                            <div>                                    
-                                <h5 class="mb-1"><i class="fa-solid fa-circle-check puce-success me-3"></i><?php echo htmlspecialchars($fiche['nom_produit']); ?></h5>
-                                <span class="badge bg-info mb-1 text-light shadow-sm" style="font-size: 0.65rem; letter-spacing: 1px;">
-                                     IA ENGINE
-                                </span>
+                            <div>                                
+                                <input type="checkbox" 
+                                    class="select-fiche" 
+                                    value="<?php echo htmlspecialchars($fiche['id'], ENT_QUOTES, 'UTF-8'); ?>" 
+                                    data-nom="<?php echo htmlspecialchars($fiche['nom_produit'], ENT_QUOTES, 'UTF-8'); ?>" 
+                                    data-resume="<?php echo htmlspecialchars($fiche['resume'], ENT_QUOTES, 'UTF-8'); ?>">
+
+                                <h5 class="mb-1 d-inline"><i class="fa-solid fa-circle-check puce-success me-3"></i><?php echo htmlspecialchars($fiche['nom_produit']); ?></h5>
+                                <span class="badge bg-info mb-1 text-light shadow-sm" style="font-size: 0.65rem; letter-spacing: 1px;">IA ENGINE</span>
                                 <span class="badge text-bg-success"><i class="fa-regular fa-clock me-1"></i> <?php echo $dateFr; ?></span>
 
                                 <span class="badge <?php echo ($fiche['fiabilite'] > 70) ? 'bg-primary' : 'bg-warning'; ?> shadow-sm">
                                     <i class="fa-solid fa-gauge-high"></i> Fiabilité : <?php echo $fiche['fiabilite']; ?>%
                                 </span>
                                 
-                                <button class="btn btn-sm btn-link text-decoration-none" 
-                                        data-bs-toggle="tooltip" title="<?php echo htmlspecialchars($fiche['incertitude']); ?>">
+                                <button class="btn btn-sm btn-link text-decoration-none" data-bs-toggle="tooltip" title="<?php echo htmlspecialchars($fiche['incertitude']); ?>">
                                     <i class="fa-solid fa-circle-question text-muted"></i>
                                 </button>
                             </div>
@@ -106,17 +123,15 @@ $archives = recupererArchives();
                                 <button class="btn btn-outline-danger" onclick="confirmSuppr('supprimer.php?id=<?php echo $fiche['id']; ?>')">
                                     <i class="fa-solid fa-trash"></i>
                                 </button>
-
                                 <button class="btn btn-outline-warning" onclick="ouvrirModaleArchive(<?php echo $fiche['id']; ?>, this)">
                                     <i class="fa-solid fa-box-archive"></i>
                                 </button>
-
                                 <button class="btn btn-outline-primary btn-voir-resultat" 
-                                    data-nom="<?php echo htmlspecialchars($fiche['nom_produit'], ENT_QUOTES, 'UTF-8'); ?>"
-                                    data-description="<?php echo htmlspecialchars($fiche['description_ia'], ENT_QUOTES, 'UTF-8'); ?>"
-                                    data-resume="<?php echo htmlspecialchars($fiche['resume'], ENT_QUOTES, 'UTF-8'); ?>"
-                                    data-time="<?php echo (int)$fiche['execution_time']; ?>"
-                                    data-tokens="<?php echo (int)$fiche['token_count']; ?>">
+                                        data-nom="<?php echo htmlspecialchars($fiche['nom_produit'], ENT_QUOTES, 'UTF-8'); ?>"
+                                        data-description="<?php echo htmlspecialchars($fiche['description_ia'], ENT_QUOTES, 'UTF-8'); ?>"
+                                        data-resume="<?php echo htmlspecialchars($fiche['resume'], ENT_QUOTES, 'UTF-8'); ?>"
+                                        data-time="<?php echo (int)$fiche['execution_time']; ?>"
+                                        data-tokens="<?php echo (int)$fiche['token_count']; ?>">
                                     <i class="fa-solid fa-eye me-1"></i> Voir le résultat
                                 </button>
                             </div>
@@ -125,6 +140,23 @@ $archives = recupererArchives();
                 <?php endforeach; ?>
             </div>
 
+            <?php if ($nombreDePages > 1): ?>
+            <nav aria-label="Page navigation" class="mt-4">
+                <ul class="pagination justify-content-center">
+                    <li class="page-item <?php echo ($page <= 1) ? 'disabled' : ''; ?>">
+                        <a class="page-link" href="?page=<?php echo $page - 1; ?>">Précédent</a>
+                    </li>
+                    <?php for($i = 1; $i <= $nombreDePages; $i++): ?>
+                        <li class="page-item <?php echo ($i == $page) ? 'active' : ''; ?>">
+                            <a class="page-link" href="?page=<?php echo $i; ?>"><?php echo $i; ?></a>
+                        </li>
+                    <?php endfor; ?>
+                    <li class="page-item <?php echo ($page >= $nombreDePages) ? 'disabled' : ''; ?>">
+                        <a class="page-link" href="?page=<?php echo $page + 1; ?>">Suivant</a>
+                    </li>
+                </ul>
+            </nav>
+            <?php endif; ?>
             <div id="section-exploration" class="hidden-section mt-4">
                 <div class="table-responsive card border-0 shadow-sm p-3">
                     <table class="table table-hover align-middle">
@@ -196,13 +228,39 @@ $archives = recupererArchives();
                         <?php endforeach; ?>
                     </div>
                 <?php endif; ?>
-            </div>
-
-            <div class="text-center mt-5">
-                <button class="btn btn-link text-muted text-decoration-none small" onclick="confirmSuppr('supprimer_tout.php', true)">
+            </div>  
+            
+            <div class="text-center mt-5 mb-5">
+                <button class="btn btn-primary text-light text-decoration-none small" onclick="confirmSuppr('supprimer_tout.php', true)">
                     <i class="fa-solid fa-power-off me-1"></i> Réinitialiser les recherches
                 </button>
             </div>
+            
+             <footer class="footer mt-auto py-5 bg-white border-top">
+                <div class="container">
+                    <div class="row align-items-center">
+                        
+                        <div class="col-md-6 text-center text-md-start">
+                            <h6 class="text-uppercase fw-bold mb-1">IA Search Engine</h6>
+                            <p class="text-muted small mb-0">
+                                &copy; <?php echo date('Y'); ?> 
+                                <a href="https://gabriel-cassano.be/" class="text-decoration-none text-primary fw-bold">Gabriele Cassano</a>
+                            </p>
+                        </div>
+
+                        <div class="col-md-6 text-center text-md-end mt-3 mt-md-0">
+                            <div class="d-inline-flex align-items-center bg-light p-2 px-3 rounded-pill border shadow-sm">
+                                <span class="text-muted small me-2 text-uppercase fw-bold" style="font-size: 0.7rem;">Model</span>
+                                <span class="badge bg-dark">
+                                    <i class="fa-solid fa-microchip me-1 text-info"></i> 
+                                    <?php echo defined('AI_MODEL') ? AI_MODEL : 'llama3.2:1b'; ?>
+                                </span>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+            </footer>           
 
             <button id="backToTop" class="btn btn-primary rounded-circle shadow" 
                     style="position: fixed; bottom: 30px; right: 30px; display: none; z-index: 9999;">
@@ -309,6 +367,28 @@ $archives = recupererArchives();
             <div id="modal-resume-result" class="p-2 bg-light border rounded"></div>
         </div>
 
+        <div class="modal fade" id="compareModal" tabindex="-1" aria-labelledby="compareModalLabel" aria-hidden="true">
+            <div class="modal-dialog modal-lg modal-dialog-centered">
+                <div class="modal-content">
+                    <div class="modal-header bg-dark text-white">
+                        <h5 class="modal-title" id="compareModalLabel">
+                            <i class="fa-solid fa-microchip me-2 text-info"></i> Analyse comparative IA
+                        </h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Fermer"></button>
+                    </div>
+                    <div class="modal-body" id="compareModalBody">
+                        <div class="text-center p-5">
+                            <div class="spinner-border text-primary" role="status"></div>
+                            <p class="mt-3">Préparation de l'analyse...</p>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fermer</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
         <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
         <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
         <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
@@ -641,17 +721,117 @@ $archives = recupererArchives();
             document.getElementById('modal-resume-text').innerHTML = marked.parse(resume);
 
             function updateMetrics(data) {
-                // 1. Statut API
+                // Statut del'API
                 const statusEl = document.getElementById('api-status');
                 statusEl.innerText = data.success ? 'CONNECTED' : 'ERROR';
                 statusEl.style.color = data.success ? '#00ff41' : '#ff4d4d';
 
-                // 2. Temps de génération
+                // Temps de génération
                 document.getElementById('gen-time').innerText = data.execution_time || '0';
 
-                // 3. Calcul simple des tokens (approximatif : 1 mot ≈ 0.75 token)
+                // Calcul simple des tokens (approximatif : 1 mot ≈ 0.75 token)
                 const wordCount = data.content.split(' ').length;
                 document.getElementById('token-count').innerText = Math.round(wordCount * 1.3);
+            }
+
+            // Fonction à déclencher au clic sur un bouton "Comparer"
+            async function comparerFiches() {
+                const selected = document.querySelectorAll('.select-fiche:checked');
+                if (selected.length !== 2) {
+                    alert("Veuillez sélectionner exactement 2 fiches.");
+                    return;
+                }
+
+                const data = {
+                    item1: selected[0].getAttribute('data-resume'),
+                    item2: selected[1].getAttribute('data-resume')
+                };
+
+                const response = await fetch('comparateur.php', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(data)
+                });
+                
+                const result = await response.json();
+                if (result.status === 'success') {
+                    // Affiche le résultat dans une modale dédiée
+                    document.getElementById('modal-resume-result').innerHTML = result.analyse;
+                    new bootstrap.Modal(document.getElementById('previewModal')).show();
+                }
+            }
+
+            function ouvrirModaleComparaison() {
+                // Récupérer toutes les checkboxes cochées ayant la classe 'select-fiche'
+                const checkboxes = document.querySelectorAll('.select-fiche:checked');
+                
+                if (checkboxes.length < 2) {
+                    alert("Veuillez sélectionner au moins 2 fiches pour comparer.");
+                    return;
+                }
+
+                // 2. Extraire les données (data-nom et data-resume)
+                let contenuHTML = '<div class="row">';
+                checkboxes.forEach(cb => {
+                    const nom = cb.getAttribute('data-nom');
+                    const resume = cb.getAttribute('data-resume');
+                    
+                    contenuHTML += `
+                        <div class="col-md-6">
+                            <h5>${nom}</h5>
+                            <p>${resume}</p>
+                        </div>`;
+                });
+                contenuHTML += '</div>';
+
+                // 3. Injecter dans la modale et l'afficher
+                document.getElementById('compareModalBody').innerHTML = contenuHTML;
+                var myModal = new bootstrap.Modal(document.getElementById('compareModal'));
+                myModal.show();
+            }
+
+            async function lancerComparaisonIA() {
+                const checkboxes = document.querySelectorAll('.select-fiche:checked');
+
+                if (checkboxes.length < 2) {
+                    alert("Veuillez sélectionner au moins 2 éléments.");
+                    return;
+                }
+
+                const modalElement = document.getElementById('compareModal');
+                const modalBody = document.getElementById('compareModalBody');
+                
+                // 1. Récupérer ou créer l'instance Bootstrap correctement
+                let myModal = bootstrap.Modal.getInstance(modalElement);
+                if (!myModal) {
+                    myModal = new bootstrap.Modal(modalElement);
+                }
+                
+                modalBody.innerHTML = '<div class="text-center p-5"><div class="spinner-grow text-primary"></div><p>Analyse IA en cours...</p></div>';
+                myModal.show();
+
+                // Récupération des noms
+                const item1 = checkboxes[0].dataset.nom;
+                const item2 = checkboxes[1].dataset.nom;
+
+                // Appel à ton comparer.php
+                try {
+                    const response = await fetch('comparer.php', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ item1: item1, item2: item2 })
+                    });
+
+                    const data = await response.json();
+
+                    if (data.status === 'success') {
+                        modalBody.innerHTML = `<div class="p-3">${data.analyse}</div>`;
+                    } else {
+                        modalBody.innerHTML = `<div class="alert alert-danger">Erreur : ${data.message}</div>`;
+                    }
+                } catch (error) {
+                    modalBody.innerHTML = `<div class="alert alert-danger">Erreur de connexion avec l'IA.</div>`;
+                }
             }
         </script>
     </body>
