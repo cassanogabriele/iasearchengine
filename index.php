@@ -278,11 +278,7 @@ $recherchesPaginees = array_slice($recherches, $offset, $parPage);
                         <h3 class="fw-bold text-white mb-3" id="modal-product-name" style="font-size: 1.8rem;"></h3>
                         
                         <div id="modal-description" class="md-render text-start p-4 rounded-3 mb-4" style="background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.05); max-height: 300px; overflow-y: auto;"></div>
-                        
-                        <div id="resume-container" class="text-start mb-4 p-3 rounded" style="background: rgba(0, 0, 0, 0.2); border-left: 4px solid #0dcaf0; display: none;">
-                            <h6 class="text-info"><i class="fa-solid fa-bolt me-2"></i>Résumé IA</h6>
-                            <div id="modal-resume-result" style="font-size: 0.95rem;"></div>
-                        </div>
+                      
                     </div>
 
                     <div class="d-flex justify-content-center w-100 mb-4">
@@ -382,7 +378,12 @@ $recherchesPaginees = array_slice($recherches, $offset, $parPage);
                             <p class="mt-3">Préparation de l'analyse...</p>
                         </div>
                     </div>
+
                     <div class="modal-footer">
+                        <button type="button" class="btn btn-outline-light fw-bold px-4 py-2 me-2 text-black" onclick="copierAnalyse()">
+                            <i class="fa-solid fa-copy me-1"></i> Copier
+                        </button>
+
                         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fermer</button>
                     </div>
                 </div>
@@ -418,36 +419,25 @@ $recherchesPaginees = array_slice($recherches, $offset, $parPage);
 
             document.querySelectorAll('.btn-voir-resultat').forEach(btn => {
                 btn.addEventListener('click', function() {
-                    // 1. Récupération des données depuis les attributs data-*
                     const nom = this.getAttribute('data-nom');
                     const desc = this.getAttribute('data-description');
-                    const resume = this.getAttribute('data-resume');
-                    const time = this.getAttribute('data-time');
-                    const tokens = this.getAttribute('data-tokens');
+                    const resume = this.getAttribute('data-resume'); // Utilise directement l'attribut HTML
 
-                    // 2. Injection des contenus
+                    // Stockage dans des variables globales pour que le bouton bascule y accède
+                    window.currentDesc = desc;
+                    window.currentResume = (resume && resume.trim() !== "") ? resume : "Aucun résumé disponible.";
+
+                    // Injection initiale
                     document.getElementById('modal-product-name').innerText = nom;
-                    document.getElementById('modal-description').innerHTML = desc;
-                    
-                    // Gestion du résumé (si vide, on cache le bloc)
-                    const resumeContainer = document.getElementById('resume-container');
-                    const resumeResult = document.getElementById('modal-resume-result');
-                    
-                    if (resume && resume.trim() !== "") {
-                        resumeResult.innerHTML = resume;
-                        resumeContainer.style.display = 'block';
-                    } else {
-                        resumeContainer.style.display = 'none';
-                    }
+                    const modalDesc = document.getElementById('modal-description');
+                    modalDesc.innerHTML = marked.parse(window.currentDesc);
 
-                    // 3. Mise à jour de la console technique (Monitoring)
-                    document.getElementById('gen-time').innerText = time + ' ms';
-                    document.getElementById('token-count').innerText = tokens;
-                    const statusEl = document.getElementById('api-status');
-                    statusEl.innerText = 'LOADED_FROM_DB';
-                    statusEl.style.color = '#00ff41';
+                    // Réinitialisation du bouton de bascule
+                    const btnAction = document.getElementById('btn-generer-resume');
+                    btnAction.dataset.state = "description";
+                    // On remet l'icône + le texte
+                    btnAction.innerHTML = '<i class="fa-solid fa-wand-magic-sparkles me-1"></i> Résumé';
 
-                    // 4. Ouverture
                     new bootstrap.Modal(document.getElementById('previewModal')).show();
                 });
             });
@@ -455,16 +445,16 @@ $recherchesPaginees = array_slice($recherches, $offset, $parPage);
             // Gestion du basculement (toggle)
             btnAction.addEventListener('click', function() {
                 const modalDesc = document.getElementById('modal-description');
-                
+    
                 if (this.dataset.state === "description") {
                     // Passer au résumé
                     modalDesc.innerHTML = marked.parse(window.currentResume);
-                    this.innerText = "Description complète";
+                    this.innerHTML = '<i class="fa-solid fa-align-left me-1"></i> Description complète';
                     this.dataset.state = "resume";
                 } else {
                     // Revenir à la description
                     modalDesc.innerHTML = marked.parse(window.currentDesc);
-                    this.innerText = "Résumé";
+                    this.innerHTML = '<i class="fa-solid fa-wand-magic-sparkles me-1"></i> Résumé';
                     this.dataset.state = "description";
                 }
             });
@@ -700,7 +690,6 @@ $recherchesPaginees = array_slice($recherches, $offset, $parPage);
             function copierTexte() {
                 const texteACopier = document.getElementById('modal-description').innerText;
                 navigator.clipboard.writeText(texteACopier).then(() => {
-                    // Optionnel : un petit feedback visuel avec SweetAlert
                     Swal.fire({
                         toast: true,
                         position: 'top-end',
@@ -734,67 +723,17 @@ $recherchesPaginees = array_slice($recherches, $offset, $parPage);
                 document.getElementById('token-count').innerText = Math.round(wordCount * 1.3);
             }
 
-            // Fonction à déclencher au clic sur un bouton "Comparer"
-            async function comparerFiches() {
-                const selected = document.querySelectorAll('.select-fiche:checked');
-                if (selected.length !== 2) {
-                    alert("Veuillez sélectionner exactement 2 fiches.");
-                    return;
-                }
-
-                const data = {
-                    item1: selected[0].getAttribute('data-resume'),
-                    item2: selected[1].getAttribute('data-resume')
-                };
-
-                const response = await fetch('comparateur.php', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify(data)
-                });
-                
-                const result = await response.json();
-                if (result.status === 'success') {
-                    // Affiche le résultat dans une modale dédiée
-                    document.getElementById('modal-resume-result').innerHTML = result.analyse;
-                    new bootstrap.Modal(document.getElementById('previewModal')).show();
-                }
-            }
-
-            function ouvrirModaleComparaison() {
-                // Récupérer toutes les checkboxes cochées ayant la classe 'select-fiche'
-                const checkboxes = document.querySelectorAll('.select-fiche:checked');
-                
-                if (checkboxes.length < 2) {
-                    alert("Veuillez sélectionner au moins 2 fiches pour comparer.");
-                    return;
-                }
-
-                // 2. Extraire les données (data-nom et data-resume)
-                let contenuHTML = '<div class="row">';
-                checkboxes.forEach(cb => {
-                    const nom = cb.getAttribute('data-nom');
-                    const resume = cb.getAttribute('data-resume');
-                    
-                    contenuHTML += `
-                        <div class="col-md-6">
-                            <h5>${nom}</h5>
-                            <p>${resume}</p>
-                        </div>`;
-                });
-                contenuHTML += '</div>';
-
-                // 3. Injecter dans la modale et l'afficher
-                document.getElementById('compareModalBody').innerHTML = contenuHTML;
-                var myModal = new bootstrap.Modal(document.getElementById('compareModal'));
-                myModal.show();
-            }
-
+            // Fonction à déclencher au clic sur un bouton "Comparer"    
             async function lancerComparaisonIA() {
                 const checkboxes = document.querySelectorAll('.select-fiche:checked');
 
                 if (checkboxes.length < 2) {
-                    alert("Veuillez sélectionner au moins 2 éléments.");
+                     Swal.fire({
+                            icon: 'warning', 
+                            title: 'Attention',
+                            text: 'Veuillez sélectionner au moins 2 résultas de recherche !', 
+                            confirmButtonColor: '#f39c12'
+                        });
                     return;
                 }
 
@@ -832,6 +771,22 @@ $recherchesPaginees = array_slice($recherches, $offset, $parPage);
                 } catch (error) {
                     modalBody.innerHTML = `<div class="alert alert-danger">Erreur de connexion avec l'IA.</div>`;
                 }
+            }
+
+            function copierAnalyse() {
+                const content = document.getElementById('compareModalBody').innerText;
+                navigator.clipboard.writeText(content).then(() => {
+                    Swal.fire({
+                        toast: true,
+                        position: 'top-end',
+                        icon: 'success',
+                        title: 'Copié dans le presse-papier',
+                        showConfirmButton: false,
+                        timer: 1500
+                    });
+                }).catch(err => {
+                    console.error('Erreur de copie : ', err);
+                });
             }
         </script>
     </body>
