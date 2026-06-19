@@ -12,8 +12,14 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && !empty($_POST['produit'])) {
     $caract = htmlspecialchars($_POST['caract']);
 
     $prompt = "Tu es un expert. Analyse '$nom' ($caract). 
-    Réponds EXCLUSIVEMENT en JSON valide. Pas de texte, pas d'explication.
-    Format : {\"RESUME\": \"texte\", \"DESCRIPTION\": \"texte\", \"FIABILITE\": 90, \"INCERTITUDE\": \"texte\"}";
+        Réponds EXCLUSIVEMENT en JSON valide. Pas de texte, pas d'explication.
+        Format requis : {
+            \"RESUME\": \"texte\", 
+            \"DESCRIPTION\": \"texte\", 
+            \"FIABILITE\": 90, 
+            \"INCERTITUDE\": \"texte\",
+            \"STATS\": {\"mots\": X, \"tokens\": Y}
+        }";
 
     $data = ["model" => AI_MODEL, "prompt" => $prompt, "stream" => false];
     
@@ -56,9 +62,21 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && !empty($_POST['produit'])) {
         $execution_time = round(($end_time - $start_time) * 1000); // en ms
         // Estimation : 1 mot ≈ 1.3 tokens (très couramment utilisé pour les estimations rapides)
         $token_count = round(str_word_count($resume . $description) * 1.3);
+        $stats = $data_ia['STATS'] ?? [];
+        $word_count = (int)($stats['mots'] ?? 0);      
 
-       sauvegarderRecherche($nom, $caract, $description, $resume, $fiabilite, $incertitude, $execution_time, $token_count);
-        
+        sauvegarderRecherche(
+            $nom, 
+            $caract, 
+            $description, 
+            $resume, 
+            $fiabilite, 
+            $incertitude, 
+            $execution_time, 
+            $token_count, 
+            $word_count
+        );
+
         echo json_encode([
             'status' => 'success', 
             'resume' => $resume, 
@@ -66,7 +84,8 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && !empty($_POST['produit'])) {
             'fiabilite' => $fiabilite, 
             'incertitude' => $incertitude,
             'execution_time' => $execution_time,
-            'token_count' => $token_count
+            'token_count' => $token_count,
+            'word_count' => $word_count
         ]);
     } else {
         echo json_encode(['status' => 'error', 'message' => 'Le JSON est mal formé.', 'raw' => $json_str]);

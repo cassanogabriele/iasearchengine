@@ -131,8 +131,8 @@ $recherchesPaginees = array_slice($recherches, $offset, $parPage);
                                         data-description="<?php echo htmlspecialchars($fiche['description_ia'], ENT_QUOTES, 'UTF-8'); ?>"
                                         data-resume="<?php echo htmlspecialchars($fiche['resume'], ENT_QUOTES, 'UTF-8'); ?>"
                                         data-time="<?php echo (int)$fiche['execution_time']; ?>"
-                                        data-tokens="<?php echo (int)$fiche['token_count']; ?>">
-                                    <i class="fa-solid fa-eye me-1"></i> Voir le résultat
+                                        data-tokens="<?php echo (int)$fiche['token_count']; ?>"
+                                        data-words="<?php echo (int)$fiche['word_count']; ?>"> <i class="fa-solid fa-eye me-1"></i> Voir le résultat
                                 </button>
                             </div>
                         </div>
@@ -295,11 +295,12 @@ $recherchesPaginees = array_slice($recherches, $offset, $parPage);
 
                     <div id="metrics-console" class="p-3 bg-dark border border-secondary rounded shadow-sm font-monospace text-start" style="font-size: 0.75rem; color: #00ff41;">
                         <div class="d-flex justify-content-between">
-                            <span><i class="fa-solid fa-microchip me-1"></i>Status : <span id="api-status"></span></span>
-                            <span><i class="fa-solid fa-clock me-1"></i>Latence: <span id="gen-time"><?php echo $donnees['execution_time']; ?> ms</span>
+                            <span><i class="fa-solid fa-microchip me-1"></i>Status : <span id="api-status">OK</span></span>
+                            <span><i class="fa-solid fa-clock me-1"></i>Latence: <span id="gen-time">0</span> ms</span>
                         </div>
                         <div class="mt-1">
-                            <span><i class="fa-solid fa-font me-1"></i>Tokens: <span id="token-count"><?php echo $donnees['token_count']; ?></span>
+                            <span><i class="fa-solid fa-font me-1"></i>Tokens: <span id="token-count">0</span></span>
+                            <span class="ms-3"><i class="fa-solid fa-pen-nib me-1"></i>Mots: <span id="word-count">0</span></span>
                         </div>
                     </div>
                 </div>
@@ -354,6 +355,11 @@ $recherchesPaginees = array_slice($recherches, $offset, $parPage);
                     <div class="modal-body">
                         <?php echo htmlspecialchars($donnees['description']); ?>
                     </div>
+
+                    <p class="text-muted small">
+                        <i class="fa-solid fa-calculator"></i> 
+                        Nombre de caractères : <span id="char-count">0</span>
+                    </p>
                 </div>
             </div>
         </div>
@@ -421,7 +427,15 @@ $recherchesPaginees = array_slice($recherches, $offset, $parPage);
                 btn.addEventListener('click', function() {
                     const nom = this.getAttribute('data-nom');
                     const desc = this.getAttribute('data-description');
-                    const resume = this.getAttribute('data-resume'); // Utilise directement l'attribut HTML
+                    const resume = this.getAttribute('data-resume'); 
+                    const time = this.getAttribute('data-time') || '0';
+                    const tokens = this.getAttribute('data-tokens') || '0';
+                    const words = this.getAttribute('data-words') || '0'; 
+
+                    document.getElementById('gen-time').innerText = time;
+                    document.getElementById('token-count').innerText = tokens;
+                    document.getElementById('word-count').innerText = words;
+
 
                     // Stockage dans des variables globales pour que le bouton bascule y accède
                     window.currentDesc = desc;
@@ -441,6 +455,7 @@ $recherchesPaginees = array_slice($recherches, $offset, $parPage);
                     new bootstrap.Modal(document.getElementById('previewModal')).show();
                 });
             });
+
 
             // Gestion du basculement (toggle)
             btnAction.addEventListener('click', function() {

@@ -31,22 +31,28 @@ function verifierCache($nom_produit, $caract) {
 }
 
 // Sauvegarde de la nouvelle recherche en BDD avec les nouveaux champs
-function sauvegarderRecherche($nom_produit, $caract, $description_ia, $resume, $fiabilite, $incertitude, $execution_time = 0, $token_count = 0) {
+function sauvegarderRecherche($nom, $caract, $description, $resume, $fiabilite, $incertitude, $exec_time, $tokens, $mots) {
     global $pdo;
-    $stmt = $pdo->prepare("
-        INSERT INTO fiches_produits 
-        (nom_produit, caract_cle, description_ia, resume, fiabilite, incertitude, execution_time, token_count, archive) 
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0)
-    ");
+
+    // Il y a 11 colonnes listées, il faut 11 points d'interrogation
+    $sql = "INSERT INTO fiches_produits 
+            (nom_produit, caract_cle, description_ia, resume, date_creation, archive, fiabilite, incertitude, execution_time, token_count, word_count) 
+            VALUES (?, ?, ?, ?, NOW(), 0, ?, ?, ?, ?, ?)";
+    
+    $stmt = $pdo->prepare($sql);
+    
+    // Tu dois envoyer exactement 9 variables pour remplir les 9 '?' manquants 
+    // (date_creation et archive étant gérés en dur dans le SQL)
     $stmt->execute([
-        $nom_produit, 
-        $caract, 
-        $description_ia, 
-        $resume, 
-        $fiabilite, 
-        $incertitude, 
-        $execution_time, 
-        $token_count
+        $nom,          
+        $caract,       
+        $description,  
+        $resume,      
+        $fiabilite,    
+        $incertitude,  
+        $exec_time,    
+        $tokens,       
+        $mots          
     ]);
 }
 
