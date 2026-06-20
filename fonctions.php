@@ -90,4 +90,17 @@ function desarchiverRecherche($id) {
         return false;
     }
 }
+
+function getStatistiquesPerformance() {
+    global $pdo;
+    // On récupère les données pour le graphique
+    $stmt = $pdo->query("SELECT 
+            DATE(date_creation) as jour, 
+            AVG(execution_time) as avg_time, 
+            AVG(token_count) as avg_tokens 
+            FROM fiches_produits 
+            GROUP BY DATE(date_creation) 
+            ORDER BY jour ASC LIMIT 30");
+    return $stmt->fetchAll(PDO::FETCH_ASSOC);
+}
 ?>
