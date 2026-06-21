@@ -394,6 +394,13 @@ $recherchesPaginees = array_slice($recherches, $offset, $parPage);
                                 <i class="fa-solid fa-copy me-1"></i> Copier
                             </button>
 
+                            <form action="exporter.php" method="POST" id="pdfForm">
+                                <input type="hidden" name="html_content" id="html_content_field">
+                                <button type="button" class="btn btn-danger btn-sm" onclick="submitPdfForm()">
+                                    <i class="fa-solid fa-file-pdf"></i> PDF
+                                </button>
+                            </form>
+
                             <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fermer</button>
                         </div>
                     </div>
@@ -807,6 +814,25 @@ $recherchesPaginees = array_slice($recherches, $offset, $parPage);
                     }).catch(err => {
                         console.error('Erreur de copie : ', err);
                     });
+                }
+
+                function submitPdfForm() {
+                    // Récupérer le contenu
+                    const contenu = document.getElementById('compareModalBody').innerHTML;
+                    
+                    // Debug : vérifie dans la console F12 si le contenu est bien là
+                    console.log("Contenu capturé : ", contenu); 
+                    
+                    if (contenu.trim() === "") {
+                        alert("Erreur : Le modal est vide !");
+                        return;
+                    }
+
+                    // Injecter
+                    document.getElementById('html_content_field').value = contenu;
+                    
+                    // Soumettre manuellement le formulaire
+                    document.getElementById('pdfForm').submit();
                 }
             </script>        
         </body>

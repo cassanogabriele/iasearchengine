@@ -1,5 +1,7 @@
 <?php
 require_once 'config.php';
+require 'vendor/autoload.php';
+use Dompdf\Dompdf;
 
 // Récupère les fiches des recherches de la base de données
 function recupererHistorique($limite = null) {
@@ -102,5 +104,22 @@ function getStatistiquesPerformance() {
             GROUP BY DATE(date_creation) 
             ORDER BY jour ASC LIMIT 30");
     return $stmt->fetchAll(PDO::FETCH_ASSOC);
+}
+
+function genererPDF($id) {
+    global $pdo;
+    $stmt = $pdo->prepare("SELECT * FROM fiches_produits WHERE id = ?");
+    $stmt->execute([$id]);
+    $fiche = $stmt->fetch();
+
+    $html = "<h1>Fiche : {$fiche['nom_produit']}</h1>
+             <p><strong>Résumé:</strong> {$fiche['resume']}</p>
+             <p><strong>Description:</strong> {$fiche['description_ia']}</p>
+             <hr><small>Généré le: {$fiche['date_creation']} | Tokens: {$fiche['token_count']}</small>";
+
+    $dompdf = new Dompdf();
+    $dompdf->loadHtml($html);
+    $dompdf->render();
+    $dompdf->stream("analyse_{$fiche['nom_produit']}.pdf");
 }
 ?>
