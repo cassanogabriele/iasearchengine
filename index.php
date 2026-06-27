@@ -1,6 +1,8 @@
 <?php 
+/*
 ini_set('display_errors', 1);
 error_reporting(E_ALL);
+*/
 
 require_once 'fonctions.php'; 
 
@@ -18,6 +20,21 @@ $offset = ($page - 1) * $parPage;
 
 // On récupère uniquement la tranche pour la page actuelle
 $recherchesPaginees = array_slice($recherches, $offset, $parPage);
+
+if (isset($_GET['token'])) {
+    $stmt = $pdo->prepare("SELECT contenu_html FROM analyses_partagees WHERE token = ?");
+    $stmt->execute([$_GET['token']]);
+    $analyse = $stmt->fetch();
+
+    if ($analyse) {
+        // Affichage de l'analyse dans le design du site
+        echo '<!DOCTYPE html><html lang="fr"><head><link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet"></head><body class="bg-light p-5">';
+        echo '<div class="container bg-white p-5 shadow rounded">' . $analyse['contenu_html'] . '</div>';
+        echo '<div class="text-center mt-4"><a href="index.php" class="btn btn-primary">Nouvelle recherche</a></div>';
+        echo '</body></html>';
+        exit; 
+    }
+}
 ?>
 
 <!DOCTYPE html>
@@ -81,7 +98,7 @@ $recherchesPaginees = array_slice($recherches, $offset, $parPage);
                             <i class="fa-solid fa-chart-line"></i> Voir les Statistiques
                         </a>
 
-                        <button class="btn btn-warning rounded-pill px-4 shadow-sm" onclick="lancerComparaisonIA()">
+                        <button class="btn btn-warning rounded-pill px-4 shadow-sm text-white" onclick="lancerComparaisonIA()">
                             <i class="fa-solid fa-code-compare me-2"></i> Comparer 
                         </button>
 
@@ -390,13 +407,18 @@ $recherchesPaginees = array_slice($recherches, $offset, $parPage);
                         </div>
 
                         <div class="modal-footer">
-                            <button type="button" class="btn btn-outline-light fw-bold px-4 py-2 me-2 text-black" onclick="copierAnalyse()">
+                            <button type="button" class="btn btn-warning text-white" onclick="copierAnalyse()">
                                 <i class="fa-solid fa-copy me-1"></i> Copier
+                            </button>
+
+                            <button type="button" class="btn btn-info text-white" onclick="partagerAnalyse()">
+                                <i class="fa-solid fa-share-nodes"></i> Partager
                             </button>
 
                             <form action="exporter.php" method="POST" id="pdfForm">
                                 <input type="hidden" name="html_content" id="html_content_field">
-                                <button type="button" class="btn btn-danger btn-sm" onclick="submitPdfForm()">
+
+                                <button type="button" class="btn btn-danger" onclick="submitPdfForm()">
                                     <i class="fa-solid fa-file-pdf"></i> PDF
                                 </button>
                             </form>
@@ -833,6 +855,26 @@ $recherchesPaginees = array_slice($recherches, $offset, $parPage);
                     
                     // Soumettre manuellement le formulaire
                     document.getElementById('pdfForm').submit();
+                }
+
+                function partagerAnalyse() {
+                    const contenu = document.getElementById('compareModalBody').innerHTML;
+
+                    fetch('sauvegarder_partage.php', {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+                        body: 'html_content=' + encodeURIComponent(contenu)
+                    })
+                    .then(res => res.json())
+                    .then(data => {
+                        navigator.clipboard.writeText(data.url);
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'Lien copié !',
+                            text: 'Le lien de partage a été copié dans votre presse-papier.',
+                            confirmButtonColor: '#3085d6'
+                        });
+                    });
                 }
             </script>        
         </body>
