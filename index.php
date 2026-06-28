@@ -70,13 +70,17 @@ if (isset($_GET['token'])) {
                         <div class="col-md-5">
                             <input type="text" name="produit" class="form-control" placeholder="Que recherchez-vous ?" required>
                         </div>
-
                         <div class="col-md-5">
                             <input type="text" name="caract" class="form-control" placeholder="Caractéristiques de recherche">
                         </div>
-
-                        <div class="col-md-2">
-                            <button type="submit" class="btn btn-primary w-100 fw-bold"><i class="fa-solid fa-magnifying-glass me-2"></i> Rechercher</button>
+                        
+                        <div class="col-md-2 d-flex gap-2">
+                            <button type="submit" class="btn btn-primary flex-grow-1 fw-bold">
+                                <i class="fa-solid fa-magnifying-glass"></i>
+                            </button>
+                            <button type="button" class="btn btn-outline-secondary" onclick="toggleDarkMode()">
+                                <i class="fa-solid fa-circle-half-stroke"></i>
+                            </button>
                         </div>
                     </form>
                 </div>
@@ -876,6 +880,26 @@ if (isset($_GET['token'])) {
                         });
                     });
                 }
+
+                function toggleDarkMode() {
+                    // Ajoute ou retire la classe 'dark-mode' au body
+                    document.body.classList.toggle('dark-mode');
+                    
+                    // Sauvegarde la préférence dans le navigateur pour ne pas 
+                    // que ça revienne en clair au rafraîchissement de la page
+                    if (document.body.classList.contains('dark-mode')) {
+                        localStorage.setItem('theme', 'dark');
+                    } else {
+                        localStorage.setItem('theme', 'light');
+                    }
+                }
+
+                // Au chargement de la page, on vérifie si l'utilisateur avait déjà choisi le mode sombre
+                window.onload = () => {
+                    if (localStorage.getItem('theme') === 'dark') {
+                        document.body.classList.add('dark-mode');
+                    }
+                };
             </script>        
         </body>
     </html>

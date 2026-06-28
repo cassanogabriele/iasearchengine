@@ -7,6 +7,58 @@ body {
     padding: 20px;
 }
 
+/* Mode sombre : fond global */
+html, body.dark-mode {
+    background: #000000 !important; /* On annule le dégradé et on force le noir */
+    min-height: 100vh;
+    transition: background-color 0.3s ease;
+}
+
+/* Cartes et conteneurs (bg-white) */
+body.dark-mode .card, 
+body.dark-mode .bg-white {
+    background-color: #1e1e1e !important;
+    border-color: #333 !important;
+}
+
+/* Champs de recherche */
+body.dark-mode .form-control {
+    background-color: #2c2c2c !important;
+    color: #ffffff !important;
+    border: 1px solid #444 !important;
+}
+
+body.dark-mode .form-control::placeholder {
+    color: #888 !important;
+}
+
+/* Lignes de liste / résultats */
+body.dark-mode .list-group-item,
+body.dark-mode .row.bg-light {
+    background-color: #1e1e1e !important;
+    border-color: #333 !important;
+}
+
+/* Textes spécifiques (si nécessaire pour la lisibilité) */
+body.dark-mode .text-dark {
+    color: #e0e0e0 !important;
+}
+
+/* Boutons */
+body.dark-mode .btn-outline-secondary {
+    border-color: #6c757d !important;
+    color: #cccccc !important;
+}
+
+/* Ajout pour tes boutons de recherche si besoin d'inverser l'icône */
+body.dark-mode .btn-primary {
+    filter: brightness(0.9);
+}
+
+body.dark-mode h3 {
+    color: #ffffff !important;
+}
+
 h1 {
     font-weight: 800;
     letter-spacing: -1px;
@@ -109,8 +161,6 @@ h1 {
     text-align: center;
     padding-top: 35px !important;
 }
-
-
 
 /* Le jour reste sobre */
 .date-day {
