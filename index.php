@@ -1,8 +1,7 @@
 <?php 
 /*
 ini_set('display_errors', 1);
-error_reporting(E_ALL);
-*/
+error_reporting(E_ALL);*/
 
 require_once 'fonctions.php'; 
 
@@ -122,7 +121,7 @@ if (isset($_GET['token'])) {
                         $dateFr = date('d/m/Y H:i', strtotime($fiche['date_creation']));
                     ?>
 
-                        <div class="col-12">
+                       <div class="col-12">
                             <div class="preview-item p-3 rounded-3 d-flex justify-content-between align-items-center">
                                 <div>                                
                                     <input type="checkbox" 
@@ -132,16 +131,31 @@ if (isset($_GET['token'])) {
                                         data-resume="<?php echo htmlspecialchars($fiche['resume'], ENT_QUOTES, 'UTF-8'); ?>">
 
                                     <h5 class="mb-1 d-inline"><i class="fa-solid fa-circle-check puce-success me-3"></i><?php echo htmlspecialchars($fiche['nom_produit']); ?></h5>
-                                    <span class="badge bg-info mb-1 text-light shadow-sm" style="font-size: 0.65rem; letter-spacing: 1px;">IA ENGINE</span>
-                                    <span class="badge text-bg-success"><i class="fa-regular fa-clock me-1"></i> <?php echo $dateFr; ?></span>
-
-                                    <span class="badge <?php echo ($fiche['fiabilite'] > 70) ? 'bg-primary' : 'bg-warning'; ?> shadow-sm">
-                                        <i class="fa-solid fa-gauge-high"></i> Fiabilité : <?php echo $fiche['fiabilite']; ?>%
-                                    </span>
                                     
-                                    <button class="btn btn-sm btn-link text-decoration-none" data-bs-toggle="tooltip" title="<?php echo htmlspecialchars($fiche['incertitude']); ?>">
-                                        <i class="fa-solid fa-circle-question text-muted"></i>
-                                    </button>
+                                    <div class="mt-2 d-flex flex-wrap gap-2 align-items-center">
+                                        <span class="badge bg-info text-light shadow-sm" style="font-size: 0.65rem; letter-spacing: 1px;">IA ENGINE</span>
+                                        <span class="badge text-bg-success"><i class="fa-regular fa-clock me-1"></i> <?php echo $dateFr; ?></span>
+
+                                        <?php 
+                                        $tags = !empty($fiche['liste_tags']) ? explode(',', $fiche['liste_tags']) : [];
+                                        $caracts = !empty($fiche['caracteristiques']) ? explode(',', $fiche['caracteristiques']) : [];
+                                        
+                                        foreach ($tags as $tag): ?>
+                                            <span class="badge bg-warning"><i class="fa-solid fa-tag"></i> <?php echo htmlspecialchars(trim($tag)); ?></span>
+                                        <?php endforeach; 
+                                        
+                                        foreach ($caracts as $c): ?>
+                                            <span class="badge bg-secondary"><?php echo htmlspecialchars(trim($c)); ?></span>
+                                        <?php endforeach; ?>
+
+                                        <span class="badge <?php echo ($fiche['fiabilite'] > 70) ? 'bg-primary' : 'bg-warning'; ?> shadow-sm">
+                                            <i class="fa-solid fa-gauge-high"></i> Fiabilité : <?php echo $fiche['fiabilite']; ?>%
+                                        </span>
+                                        
+                                        <button class="btn btn-sm btn-link text-decoration-none p-0" data-bs-toggle="tooltip" title="<?php echo htmlspecialchars($fiche['incertitude']); ?>">
+                                            <i class="fa-solid fa-circle-question text-muted"></i>
+                                        </button>
+                                    </div>
                                 </div>
 
                                 <div class="d-flex gap-2 align-items-center">
@@ -154,10 +168,8 @@ if (isset($_GET['token'])) {
                                     <button class="btn btn-outline-primary btn-voir-resultat" 
                                             data-nom="<?php echo htmlspecialchars($fiche['nom_produit'], ENT_QUOTES, 'UTF-8'); ?>"
                                             data-description="<?php echo htmlspecialchars($fiche['description_ia'], ENT_QUOTES, 'UTF-8'); ?>"
-                                            data-resume="<?php echo htmlspecialchars($fiche['resume'], ENT_QUOTES, 'UTF-8'); ?>"
-                                            data-time="<?php echo (int)$fiche['execution_time']; ?>"
-                                            data-tokens="<?php echo (int)$fiche['token_count']; ?>"
-                                            data-words="<?php echo (int)$fiche['word_count']; ?>"> <i class="fa-solid fa-eye me-1"></i> Voir le résultat
+                                            data-resume="<?php echo htmlspecialchars($fiche['resume'], ENT_QUOTES, 'UTF-8'); ?>"> 
+                                        <i class="fa-solid fa-eye me-1"></i> Voir le résultat
                                     </button>
                                 </div>
                             </div>
