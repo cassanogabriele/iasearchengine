@@ -9,6 +9,8 @@ require_once 'fonctions.php';
 $recherches = recupererHistorique(); 
 // Les recherches archivées
 $archives = recupererArchives();
+// Les tags pour la recherche
+$tagsFiltres = recupererTousLesTags();
 
 // Configuration de la pagination
 $page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
@@ -82,6 +84,20 @@ if (isset($_GET['token'])) {
                             </button>
                         </div>
                     </form>
+
+                    <div class="mt-3">
+                        <h6 class="text-muted mb-2" style="font-size: 0.8rem; text-transform: uppercase;">Filtrer par tags :</h6>
+
+                        <button class="btn btn-sm btn-outline-secondary filter-btn m-1" data-tag="tous">Tous</button>
+
+                        <?php 
+                        $tagsFiltres = recupererTousLesTags();
+                        foreach ($tagsFiltres as $tag): ?>
+                            <button class="btn btn-sm btn-primary filter-btn m-1" data-tag="<?php echo htmlspecialchars($tag); ?>">
+                                <?php echo htmlspecialchars($tag); ?>
+                            </button>
+                        <?php endforeach; ?>
+                    </div>
                 </div>
 
                 <div id="ajax-status"></div>
@@ -912,6 +928,35 @@ if (isset($_GET['token'])) {
                         document.body.classList.add('dark-mode');
                     }
                 };
-            </script>        
+            </script>   
+
+            <script>
+            // Recherche par filtre
+            document.querySelector('.card').addEventListener('click', function(e) {
+                // Vérifie si l'élément cliqué est bien un bouton avec la classe 'filter-btn'
+                const bouton = e.target.closest('.filter-btn');
+                
+                if (bouton) {
+                    e.preventDefault(); // Empêche tout comportement par défaut
+                    const tagSelectionne = bouton.getAttribute('data-tag');
+                    console.log("Tag détecté :", tagSelectionne); // Ouvre la console F12, si ça s'affiche, ça marche
+                    
+                    const fiches = document.querySelectorAll('#section-apercu .col-12');
+                    
+                    fiches.forEach(container => {
+                        if (tagSelectionne === 'tous') {
+                            container.style.display = 'block';
+                        } else {
+                            // Vérifie si le texte du conteneur contient le tag
+                            if (container.innerText.includes(tagSelectionne)) {
+                                container.style.display = 'block';
+                            } else {
+                                container.style.display = 'none';
+                            }
+                        }
+                    });
+                }
+            });
+            </script> 
         </body>
     </html>

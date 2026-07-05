@@ -5,22 +5,6 @@ require 'vendor/autoload.php';
 use Dompdf\Dompdf;
 
 // Récupère les fiches des recherches de la base de données
-
-/*
-function recupererHistorique($limite = null) {
-    global $pdo;
-    $sql = "SELECT * FROM recherches WHERE archive = 0 ORDER BY date_creation DESC";
-    
-    if ($limite !== null) {
-        $sql .= " LIMIT " . (int)$limite;
-    }
-    
-    $query = $pdo->query($sql);
-    return $query->fetchAll();
-}
-*/
-
-
 function recupererHistorique($limite = null) {
     global $pdo;
     // On fait une jointure pour récupérer les tags concaténés par recherche
@@ -177,5 +161,18 @@ function genererPDF($id) {
     $dompdf->loadHtml($html);
     $dompdf->render();
     $dompdf->stream("analyse_{$fiche['nom_produit']}.pdf");
+}
+
+// Récupèrer tous les tags uniques pour les fitres de recherche
+function recupererTousLesTags() {
+    global $pdo;
+    try {
+        // On récupère uniquement les noms des tags, triés par ordre alphabétique
+        $stmt = $pdo->query("SELECT DISTINCT nom FROM tags ORDER BY nom ASC");
+        return $stmt->fetchAll(PDO::FETCH_COLUMN);
+    } catch (Exception $e) {
+        error_log("Erreur lors de la récupération des tags: " . $e->getMessage());
+        return [];
+    }
 }
 ?>
