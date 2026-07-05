@@ -938,9 +938,7 @@ if (isset($_GET['token'])) {
                 
                 if (bouton) {
                     e.preventDefault(); // Empêche tout comportement par défaut
-                    const tagSelectionne = bouton.getAttribute('data-tag');
-                    console.log("Tag détecté :", tagSelectionne); // Ouvre la console F12, si ça s'affiche, ça marche
-                    
+                    const tagSelectionne = bouton.getAttribute('data-tag');                    
                     const fiches = document.querySelectorAll('#section-apercu .col-12');
                     
                     fiches.forEach(container => {
