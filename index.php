@@ -131,6 +131,14 @@ if (isset($_GET['token'])) {
                     </div>
                 </div>
 
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h4 class="mb-0">Historique des recherches</h4>
+                    
+                    <span id="result-count" class="badge bg-secondary">
+                        <?php echo count($recherches); ?> résultats au total
+                    </span>
+                </div>
+
                 <div id="section-apercu" class="row g-3">
                     <?php 
                     foreach ($recherchesPaginees as $fiche): 
@@ -150,6 +158,7 @@ if (isset($_GET['token'])) {
                                     
                                     <div class="mt-2 d-flex flex-wrap gap-2 align-items-center">
                                         <span class="badge bg-info text-light shadow-sm" style="font-size: 0.65rem; letter-spacing: 1px;">IA ENGINE</span>
+                                        
                                         <span class="badge text-bg-success"><i class="fa-regular fa-clock me-1"></i> <?php echo $dateFr; ?></span>
 
                                         <?php 
@@ -933,26 +942,31 @@ if (isset($_GET['token'])) {
             <script>
             // Recherche par filtre
             document.querySelector('.card').addEventListener('click', function(e) {
-                // Vérifie si l'élément cliqué est bien un bouton avec la classe 'filter-btn'
                 const bouton = e.target.closest('.filter-btn');
                 
                 if (bouton) {
-                    e.preventDefault(); // Empêche tout comportement par défaut
-                    const tagSelectionne = bouton.getAttribute('data-tag');                    
+                    e.preventDefault();
+                    const tagSelectionne = bouton.getAttribute('data-tag');
                     const fiches = document.querySelectorAll('#section-apercu .col-12');
+                    let compte = 0; // Initialisation
                     
                     fiches.forEach(container => {
-                        if (tagSelectionne === 'tous') {
+                        // Détermine si on doit afficher l'élément
+                        const estVisible = (tagSelectionne === 'tous' || container.innerText.includes(tagSelectionne));
+                        
+                        if (estVisible) {
                             container.style.display = 'block';
+                            compte++; // <-- Incrémentation ici
                         } else {
-                            // Vérifie si le texte du conteneur contient le tag
-                            if (container.innerText.includes(tagSelectionne)) {
-                                container.style.display = 'block';
-                            } else {
-                                container.style.display = 'none';
-                            }
+                            container.style.display = 'none';
                         }
                     });
+
+                    // Mise à jour de ton badge
+                    const compteurBadge = document.getElementById('result-count');
+                    if (compteurBadge) {
+                        compteurBadge.innerText = compte + " résultats trouvés";
+                    }
                 }
             });
             </script> 
