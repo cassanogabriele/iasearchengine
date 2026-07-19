@@ -55,6 +55,7 @@ if (isset($_GET['token'])) {
                 <div class="spinner-grow text-primary" style="width: 3rem; height: 3rem;" role="status"></div>
                 <h5 class="mt-3 text-primary">L'IA génère votre réponse...</h5>
             </div>
+                
 
             <div class="container">
                 <h1 class="mb-4"><i class="fa-brands fa-searchengin"></i> IA Search Engine</h1>
@@ -84,6 +85,7 @@ if (isset($_GET['token'])) {
                             </button>
                         </div>
                     </form>
+                    
 
                     <div class="mt-3">
                         <h6 class="text-muted mb-2" style="font-size: 0.8rem; text-transform: uppercase;">Filtrer par tags :</h6>
@@ -109,7 +111,11 @@ if (isset($_GET['token'])) {
                     </div>
                 </div>
 
-            <div class="d-flex justify-content-between align-items-center mb-4">
+                <button id="btn-temps-recherche" style="display:none; position:fixed; bottom:20px; right:20px; z-index:9999;" class="btn btn-dark shadow">
+                    Temps de génération : <span id="valeur-temps">0</span> ms
+                </button>
+
+                <div class="d-flex justify-content-between align-items-center mb-4">
                     <h3 id="view-title">Dernières recherches</h3>
 
                     <div>      
@@ -176,7 +182,25 @@ if (isset($_GET['token'])) {
                                         <span class="badge <?php echo ($fiche['fiabilite'] > 70) ? 'bg-primary' : 'bg-warning'; ?> shadow-sm">
                                             <i class="fa-solid fa-gauge-high"></i> Fiabilité : <?php echo $fiche['fiabilite']; ?>%
                                         </span>
-                                        
+
+                                        <!-- Temps de génération -->
+                                        <span class="badge bg-dark shadow-sm">
+                                            <i class="fa-solid fa-bolt"></i> 
+                                            <?php 
+                                                $ms = $fiche['execution_time'] ?? 0;
+                                                if ($ms >= 60000) {
+                                                    // Conversion en minutes avec 1 décimale
+                                                    echo round($ms / 60000, 1) . ' min';
+                                                } elseif ($ms >= 1000) {
+                                                    // Conversion en secondes
+                                                    echo round($ms / 1000, 1) . ' s';
+                                                } else {
+                                                    // Affichage normal en ms
+                                                    echo $ms . ' ms';
+                                                }
+                                            ?>
+                                        </span>
+                                                                                
                                         <button class="btn btn-sm btn-link text-decoration-none p-0" data-bs-toggle="tooltip" title="<?php echo htmlspecialchars($fiche['incertitude']); ?>">
                                             <i class="fa-solid fa-circle-question text-muted"></i>
                                         </button>
@@ -529,7 +553,6 @@ if (isset($_GET['token'])) {
                         new bootstrap.Modal(document.getElementById('previewModal')).show();
                     });
                 });
-
 
                 // Gestion du basculement (toggle)
                 btnAction.addEventListener('click', function() {
@@ -969,6 +992,6 @@ if (isset($_GET['token'])) {
                     }
                 }
             });
-            </script> 
+            </script>                 
         </body>
     </html>

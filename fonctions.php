@@ -40,39 +40,36 @@ function verifierCache($nom_produit, $caract) {
     return $resultat ? $resultat['description_ia'] : null;
 }
 
-// Sauvegarde de la nouvelle recherche en BDD avec les nouveaux champs
+ // Sauvegarde de la nouvelle recherche en BDD avec les nouveaux champs
 function sauvegarderRecherche($nom, $caract, $description, $resume, $fiabilite, $incertitude, $exec_time, $tokens, $mots) {
     global $pdo;
 
-    // Il y a 11 colonnes listées, il faut 11 points d'interrogation
-    $sql = "INSERT INTO recherches 
-            (nom_produit, caract_cle, description_ia, resume, date_creation, archive, fiabilite, incertitude, execution_time, token_count, word_count) 
-            VALUES (?, ?, ?, ?, NOW(), 0, ?, ?, ?, ?, ?)";
-    
+    $sql = "INSERT INTO recherches
+            (nom_produit, caract_cle, description_ia, resume, date_creation, archive, fiabilite, incertitude, execution_time, token_count, word_count)
+            VALUES (?, ?, ?, ?, NOW(), 0, ?, ?, ?, ?, ?)";  
+
     $stmt = $pdo->prepare($sql);
-    
-    // Tu dois envoyer exactement 9 variables pour remplir les 9 '?' manquants 
-    // (date_creation et archive étant gérés en dur dans le SQL)
+
     $stmt->execute([
-        $nom,          
-        $caract,       
+        $nom,  
+        $caract, 
         $description,  
         $resume,      
         $fiabilite,    
         $incertitude,  
         $exec_time,    
-        $tokens,       
-        $mots          
+        $tokens,      
+        $mots 
     ]);
 
-    // Récupérer l'id qu'on vient de créer 
     $recherche_id = $pdo->lastInsertId();
 
     $texte_complet = $nom . " " . $description . " " . $resume;
-    extraireEtSauvegarderTags($pdo, $recherche_id, $texte_complet);
-    
+
+    extraireEtSauvegarderTags($pdo, $recherche_id, $texte_complet);  
+
     return $recherche_id;
-}
+} 
 
 function extraireEtSauvegarderTags($pdo, $recherche_id, $texte) {
     try {

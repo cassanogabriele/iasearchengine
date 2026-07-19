@@ -90,5 +90,6 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && !empty($_POST['produit'])) {
     } else {
         echo json_encode(['status' => 'error', 'message' => 'Le JSON est mal formé.', 'raw' => $json_str]);
     }
+    
     exit();
 }
