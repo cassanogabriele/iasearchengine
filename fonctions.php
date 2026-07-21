@@ -7,14 +7,13 @@ use Dompdf\Dompdf;
 // Récupère les fiches des recherches de la base de données
 function recupererHistorique($limite = null) {
     global $pdo;
-    // On fait une jointure pour récupérer les tags concaténés par recherche
     $sql = "SELECT r.*, GROUP_CONCAT(t.nom SEPARATOR ',') as liste_tags 
             FROM recherches r
             LEFT JOIN recherche_tags rt ON r.id = rt.recherche_id
             LEFT JOIN tags t ON rt.tag_id = t.id
             WHERE r.archive = 0 
             GROUP BY r.id
-            ORDER BY r.date_creation DESC";
+            ORDER BY r.favoris DESC, r.date_creation DESC";
     
     if ($limite !== null) {
         $sql .= " LIMIT " . (int)$limite;

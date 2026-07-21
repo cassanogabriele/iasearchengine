@@ -36,6 +36,9 @@ if (isset($_GET['token'])) {
         exit; 
     }
 }
+
+$isFavori = (isset($fiche['favoris']) && $fiche['favoris'] == 1);
+$classeEtoile = $isFavori ? 'fa-solid text-warning' : 'fa-regular text-muted';
 ?>
 
 <!DOCTYPE html>
@@ -133,8 +136,12 @@ if (isset($_GET['token'])) {
                         
                         <button id="toggle-view" class="btn btn-dark rounded-pill px-4 shadow-sm">
                             <i class="fa-solid fa-table-list me-2"></i> Mode Exploration
-                        </button>
+                        </button>                        
                     </div>
+                </div>
+
+                <div class="mb-3">
+                    <input type="text" id="filtreHistorique" class="form-control" placeholder="Filtrer l'historique affiché...">
                 </div>
 
                 <div class="d-flex justify-content-between align-items-center mb-3">
@@ -149,9 +156,13 @@ if (isset($_GET['token'])) {
                     <?php 
                     foreach ($recherchesPaginees as $fiche): 
                         $dateFr = date('d/m/Y H:i', strtotime($fiche['date_creation']));
+                        
+                        // CORRECTION : On calcule l'état du favori pour CHAQUE fiche de la boucle
+                        $isFavori = (isset($fiche['favoris']) && (int)$fiche['favoris'] === 1);
+                        $classeEtoile = $isFavori ? 'fa-solid text-warning' : 'fa-regular text-muted';
                     ?>
 
-                       <div class="col-12">
+                        <div class="col-12">
                             <div class="preview-item p-3 rounded-3 d-flex justify-content-between align-items-center">
                                 <div>                                
                                     <input type="checkbox" 
@@ -189,13 +200,10 @@ if (isset($_GET['token'])) {
                                             <?php 
                                                 $ms = $fiche['execution_time'] ?? 0;
                                                 if ($ms >= 60000) {
-                                                    // Conversion en minutes avec 1 décimale
                                                     echo round($ms / 60000, 1) . ' min';
                                                 } elseif ($ms >= 1000) {
-                                                    // Conversion en secondes
                                                     echo round($ms / 1000, 1) . ' s';
                                                 } else {
-                                                    // Affichage normal en ms
                                                     echo $ms . ' ms';
                                                 }
                                             ?>
@@ -219,6 +227,11 @@ if (isset($_GET['token'])) {
                                             data-description="<?php echo htmlspecialchars($fiche['description_ia'], ENT_QUOTES, 'UTF-8'); ?>"
                                             data-resume="<?php echo htmlspecialchars($fiche['resume'], ENT_QUOTES, 'UTF-8'); ?>"> 
                                         <i class="fa-solid fa-eye me-1"></i> Voir le résultat
+                                    </button>
+
+                                    <!-- Le bouton utilise maintenant la variable calculée pour chaque ligne -->
+                                    <button type="button" class="btn btn-sm btn-link p-0 me-2 btn-favori" onclick="clicFavori(<?php echo $fiche['id']; ?>, this)" title="Épingler en favori" style="position: relative; z-index: 9999; cursor: pointer;">
+                                        <i class="<?php echo $classeEtoile; ?> fa-lg fa-star"></i>
                                     </button>
                                 </div>
                             </div>
@@ -959,7 +972,8 @@ if (isset($_GET['token'])) {
                     if (localStorage.getItem('theme') === 'dark') {
                         document.body.classList.add('dark-mode');
                     }
-                };
+                };;
+            })();
             </script>   
 
             <script>
@@ -992,6 +1006,76 @@ if (isset($_GET['token'])) {
                     }
                 }
             });
-            </script>                 
+
+            // Fonction de filtre en temps réel pour l'historique affiché
+            function filtrerHistoriqueDirect() {
+                const recherche = document.getElementById('filtreHistorique').value.toLowerCase();
+                
+                // Filtre sur le mode exploration (tableau)
+                const lignes = document.querySelectorAll('#section-exploration tbody tr');
+                lignes.forEach(ligne => {
+                    const texteDeLaLigne = ligne.textContent.toLowerCase();
+                    ligne.style.display = texteDeLaLigne.includes(recherche) ? "" : "none";
+                });
+
+                // Filtre sur le mode aperçu (cartes .col-12)
+                const blocs = document.querySelectorAll('#section-apercu .col-12');
+                let compte = 0;
+                blocs.forEach(bloc => {
+                    const texteDuBloc = bloc.textContent.toLowerCase();
+                    if (texteDuBloc.includes(recherche)) {
+                        bloc.style.display = "";
+                        compte++;
+                    } else {
+                        bloc.style.display = "none";
+                    }
+                });
+
+                // Mise à jour du compteur de résultats
+                const compteurBadge = document.getElementById('result-count');
+                if (compteurBadge) {
+                    compteurBadge.innerText = compte + " résultats trouvés";
+                }
+            }
+
+            // Écoute de l'événement keyup sur le bon champ avec un délai de frappe (debounce)
+            const inputFiltreHistorique = document.getElementById('filtreHistorique');
+            if (inputFiltreHistorique) {
+                inputFiltreHistorique.addEventListener('keyup', debounce(filtrerHistoriqueDirect, 150));
+            }
+            </script> 
+            
+            <script>
+            // Mettre en favoris 
+           function clicFavori(id, btn) {
+                const icon = btn.querySelector('i');
+                
+                const xhr = new XMLHttpRequest();
+                xhr.open('POST', 'favoris.php', true);
+                xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
+                
+                xhr.onreadystatechange = function() {
+                    if (xhr.readyState === 4 && xhr.status === 200) {
+                        try {
+                            const data = JSON.parse(xhr.responseText);
+                            if (data.status === 'success') {
+                                if (data.favoris === 1) {
+                                    icon.className = 'fa-solid text-warning fa-lg fa-star';
+                                } else {
+                                    icon.className = 'fa-regular text-muted fa-lg fa-star';
+                                }
+                                location.reload();
+                            } else {
+                                alert('Erreur serveur PHP');
+                            }
+                        } catch (e) {
+                            alert('Erreur de réponse : ' + xhr.responseText);
+                        }
+                    }
+                };
+                
+                xhr.send('id=' + encodeURIComponent(id));
+            }
+            </script>
         </body>
     </html>
