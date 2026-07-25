@@ -1,7 +1,8 @@
 <?php 
 /*
 ini_set('display_errors', 1);
-error_reporting(E_ALL);*/
+error_reporting(E_ALL);
+*/
 
 require_once 'fonctions.php'; 
 
@@ -36,9 +37,6 @@ if (isset($_GET['token'])) {
         exit; 
     }
 }
-
-$isFavori = (isset($fiche['favoris']) && $fiche['favoris'] == 1);
-$classeEtoile = $isFavori ? 'fa-solid text-warning' : 'fa-regular text-muted';
 ?>
 
 <!DOCTYPE html>
@@ -73,8 +71,18 @@ $classeEtoile = $isFavori ? 'fa-solid text-warning' : 'fa-regular text-muted';
                 <div class="card p-4 mb-4 shadow-sm border-0">
                     <form id="searchForm" class="row g-3">
                         <div class="col-md-5">
-                            <input type="text" name="produit" class="form-control" placeholder="Que recherchez-vous ?" required>
+                            <div class="input-group">
+                                <input type="text" name="produit" class="form-control" placeholder="Que recherchez-vous ?" id="inputProduit" required> 
+
+                                <!-- 
+                                <button type="button" class="btn btn-outline-secondary" id="btnMicWhisper" onclick="toggleEnregistrementAudio()" title="Rechercher par la voix">
+                                    <i class="fa-solid fa-microphone" id="iconMicWhisper"></i>
+                                </button> 
+                                -->
+                            </div>
                         </div>
+
+
                         <div class="col-md-5">
                             <input type="text" name="caract" class="form-control" placeholder="Caractéristiques de recherche">
                         </div>
@@ -97,6 +105,7 @@ $classeEtoile = $isFavori ? 'fa-solid text-warning' : 'fa-regular text-muted';
 
                         <?php 
                         $tagsFiltres = recupererTousLesTags();
+
                         foreach ($tagsFiltres as $tag): ?>
                             <button class="btn btn-sm btn-primary filter-btn m-1" data-tag="<?php echo htmlspecialchars($tag); ?>">
                                 <?php echo htmlspecialchars($tag); ?>
@@ -136,12 +145,12 @@ $classeEtoile = $isFavori ? 'fa-solid text-warning' : 'fa-regular text-muted';
                         
                         <button id="toggle-view" class="btn btn-dark rounded-pill px-4 shadow-sm">
                             <i class="fa-solid fa-table-list me-2"></i> Mode Exploration
-                        </button>                        
+                        </button>
                     </div>
                 </div>
 
                 <div class="mb-3">
-                    <input type="text" id="filtreHistorique" class="form-control" placeholder="Filtrer l'historique affiché...">
+                    <input type="text" id="filtreHistorique" class="form-control" placeholder="Filtrer l'historique affiché">
                 </div>
 
                 <div class="d-flex justify-content-between align-items-center mb-3">
@@ -156,13 +165,12 @@ $classeEtoile = $isFavori ? 'fa-solid text-warning' : 'fa-regular text-muted';
                     <?php 
                     foreach ($recherchesPaginees as $fiche): 
                         $dateFr = date('d/m/Y H:i', strtotime($fiche['date_creation']));
-                        
-                        // CORRECTION : On calcule l'état du favori pour CHAQUE fiche de la boucle
+
                         $isFavori = (isset($fiche['favoris']) && (int)$fiche['favoris'] === 1);
                         $classeEtoile = $isFavori ? 'fa-solid text-warning' : 'fa-regular text-muted';
                     ?>
 
-                        <div class="col-12">
+                       <div class="col-12">
                             <div class="preview-item p-3 rounded-3 d-flex justify-content-between align-items-center">
                                 <div>                                
                                     <input type="checkbox" 
@@ -200,10 +208,13 @@ $classeEtoile = $isFavori ? 'fa-solid text-warning' : 'fa-regular text-muted';
                                             <?php 
                                                 $ms = $fiche['execution_time'] ?? 0;
                                                 if ($ms >= 60000) {
+                                                    // Conversion en minutes avec 1 décimale
                                                     echo round($ms / 60000, 1) . ' min';
                                                 } elseif ($ms >= 1000) {
+                                                    // Conversion en secondes
                                                     echo round($ms / 1000, 1) . ' s';
                                                 } else {
+                                                    // Affichage normal en ms
                                                     echo $ms . ' ms';
                                                 }
                                             ?>
@@ -219,9 +230,11 @@ $classeEtoile = $isFavori ? 'fa-solid text-warning' : 'fa-regular text-muted';
                                     <button class="btn btn-outline-danger" onclick="confirmSuppr('supprimer.php?id=<?php echo $fiche['id']; ?>')">
                                         <i class="fa-solid fa-trash"></i>
                                     </button>
+
                                     <button class="btn btn-outline-warning" onclick="ouvrirModaleArchive(<?php echo $fiche['id']; ?>, this)">
                                         <i class="fa-solid fa-box-archive"></i>
                                     </button>
+
                                     <button class="btn btn-outline-primary btn-voir-resultat" 
                                             data-nom="<?php echo htmlspecialchars($fiche['nom_produit'], ENT_QUOTES, 'UTF-8'); ?>"
                                             data-description="<?php echo htmlspecialchars($fiche['description_ia'], ENT_QUOTES, 'UTF-8'); ?>"
@@ -229,7 +242,7 @@ $classeEtoile = $isFavori ? 'fa-solid text-warning' : 'fa-regular text-muted';
                                         <i class="fa-solid fa-eye me-1"></i> Voir le résultat
                                     </button>
 
-                                    <!-- Le bouton utilise maintenant la variable calculée pour chaque ligne -->
+
                                     <button type="button" class="btn btn-sm btn-link p-0 me-2 btn-favori" onclick="clicFavori(<?php echo $fiche['id']; ?>, this)" title="Épingler en favori" style="position: relative; z-index: 9999; cursor: pointer;">
                                         <i class="<?php echo $classeEtoile; ?> fa-lg fa-star"></i>
                                     </button>
@@ -972,41 +985,10 @@ $classeEtoile = $isFavori ? 'fa-solid text-warning' : 'fa-regular text-muted';
                     if (localStorage.getItem('theme') === 'dark') {
                         document.body.classList.add('dark-mode');
                     }
-                };;
-            })();
+                };
             </script>   
 
             <script>
-            // Recherche par filtre
-            document.querySelector('.card').addEventListener('click', function(e) {
-                const bouton = e.target.closest('.filter-btn');
-                
-                if (bouton) {
-                    e.preventDefault();
-                    const tagSelectionne = bouton.getAttribute('data-tag');
-                    const fiches = document.querySelectorAll('#section-apercu .col-12');
-                    let compte = 0; // Initialisation
-                    
-                    fiches.forEach(container => {
-                        // Détermine si on doit afficher l'élément
-                        const estVisible = (tagSelectionne === 'tous' || container.innerText.includes(tagSelectionne));
-                        
-                        if (estVisible) {
-                            container.style.display = 'block';
-                            compte++; // <-- Incrémentation ici
-                        } else {
-                            container.style.display = 'none';
-                        }
-                    });
-
-                    // Mise à jour de ton badge
-                    const compteurBadge = document.getElementById('result-count');
-                    if (compteurBadge) {
-                        compteurBadge.innerText = compte + " résultats trouvés";
-                    }
-                }
-            });
-
             // Fonction de filtre en temps réel pour l'historique affiché
             function filtrerHistoriqueDirect() {
                 const recherche = document.getElementById('filtreHistorique').value.toLowerCase();
@@ -1043,11 +1025,43 @@ $classeEtoile = $isFavori ? 'fa-solid text-warning' : 'fa-regular text-muted';
             if (inputFiltreHistorique) {
                 inputFiltreHistorique.addEventListener('keyup', debounce(filtrerHistoriqueDirect, 150));
             }
-            </script> 
+            </script>
+
+            <script>
+            // Recherche par filtre
+            document.querySelector('.card').addEventListener('click', function(e) {
+                const bouton = e.target.closest('.filter-btn');
+                
+                if (bouton) {
+                    e.preventDefault();
+                    const tagSelectionne = bouton.getAttribute('data-tag');
+                    const fiches = document.querySelectorAll('#section-apercu .col-12');
+                    let compte = 0; // Initialisation
+                    
+                    fiches.forEach(container => {
+                        // Détermine si on doit afficher l'élément
+                        const estVisible = (tagSelectionne === 'tous' || container.innerText.includes(tagSelectionne));
+                        
+                        if (estVisible) {
+                            container.style.display = 'block';
+                            compte++; // <-- Incrémentation ici
+                        } else {
+                            container.style.display = 'none';
+                        }
+                    });
+
+                    // Mise à jour de ton badge
+                    const compteurBadge = document.getElementById('result-count');
+                    if (compteurBadge) {
+                        compteurBadge.innerText = compte + " résultats trouvés";
+                    }
+                }
+            });
+            </script>   
             
             <script>
             // Mettre en favoris 
-           function clicFavori(id, btn) {
+            function clicFavori(id, btn) {
                 const icon = btn.querySelector('i');
                 
                 const xhr = new XMLHttpRequest();
@@ -1076,6 +1090,114 @@ $classeEtoile = $isFavori ? 'fa-solid text-warning' : 'fa-regular text-muted';
                 
                 xhr.send('id=' + encodeURIComponent(id));
             }
+            </script>
+
+            <script>
+            // Recherche vocale
+
+            // A continue : ne fonctionne pas 
+
+            /*
+            let mediaRecorder;
+            let audioChunks = [];
+            let estEnregistrementEnCours = false;
+
+            async function toggleEnregistrementAudio() {
+                const icon = document.getElementById('iconMicWhisper');
+                const input = document.getElementById('inputProduit');
+
+                if (!input) {
+                    alert("Erreur : L'élément 'inputProduit' est introuvable dans le HTML.");
+                    return;
+                }
+
+                if (!estEnregistrementEnCours) {
+                    try {
+                        audioChunks = [];
+                        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                        
+                        mediaRecorder = new MediaRecorder(stream);
+
+                        mediaRecorder.ondataavailable = (event) => {
+                            if (event.data && event.data.size > 0) {
+                                audioChunks.push(event.data);
+                            }
+                        };
+
+                        mediaRecorder.onstop = async () => {
+                            stream.getTracks().forEach(track => track.stop());
+
+                            if (audioChunks.length === 0) {
+                                alert("Erreur : Aucun flux audio n'a été enregistré.");
+                                input.placeholder = "Que recherchez-vous ?";
+                                return;
+                            }
+
+                            const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+                            const formData = new FormData();
+                            formData.append('audio', audioBlob, 'voice.webm');
+
+                            input.placeholder = "Transcription par l'IA en cours...";
+
+                            try {
+                                const response = await fetch('transcrire_whisper.php', {
+                                    method: 'POST',
+                                    body: formData
+                                });
+                                
+                                const rawText = await response.text();
+                                console.log("Réponse brute du PHP :", rawText);
+
+                                let data;
+                                try {
+                                    data = JSON.parse(rawText);
+                                } catch (jsonErr) {
+                                    console.error("Le PHP n'a pas renvoyé du JSON valide :", rawText);
+                                    alert("Erreur PHP/Serveur (voir console F12) : " + rawText.substring(0, 100));
+                                    input.placeholder = "Que recherchez-vous ?";
+                                    return;
+                                }
+                                
+                                if (data.status === 'success') {
+                                    input.value = data.texte;
+                                    
+                                    // Lance la recherche immédiatement
+                                    const btnSubmit = document.querySelector('#searchForm button[type="submit"]');
+                                    if (btnSubmit) {
+                                        btnSubmit.click();
+                                    } else {
+                                        document.getElementById('searchForm').submit();
+                                    }
+                                } else {
+                                    alert("Erreur de transcription : " + data.message);
+                                    input.placeholder = "Que recherchez-vous ?";
+                                }
+                            } catch (err) {
+                                console.error("Erreur réseau :", err);
+                                alert("Erreur réseau lors de la communication avec le serveur.");
+                                input.placeholder = "Que recherchez-vous ?";
+                            }
+                        };
+
+                        mediaRecorder.start(250);
+                        estEnregistrementEnCours = true;
+                        icon.classList.remove('fa-microphone');
+                        icon.classList.add('fa-stop', 'text-danger');
+                        input.placeholder = "Parlez, j'écoute... (cliquez à nouveau pour valider)";
+
+                    } catch (err) {
+                        console.error("Erreur d'accès au micro :", err);
+                        alert("Impossible d'accéder au microphone. Vérifiez vos autorisations.");
+                    }
+                } else {
+                    if (mediaRecorder && mediaRecorder.state !== "inactive") {
+                        mediaRecorder.stop();
+                    }
+                    estEnregistrementEnCours = false;
+                    icon.classList.remove('fa-stop', 'text-danger');
+                    icon.classList.add('fa-microphone');
+                }
+            }*/
             </script>
         </body>
     </html>
