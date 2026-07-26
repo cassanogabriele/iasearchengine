@@ -73,15 +73,8 @@ if (isset($_GET['token'])) {
                         <div class="col-md-5">
                             <div class="input-group">
                                 <input type="text" name="produit" class="form-control" placeholder="Que recherchez-vous ?" id="inputProduit" required> 
-
-                                <!-- 
-                                <button type="button" class="btn btn-outline-secondary" id="btnMicWhisper" onclick="toggleEnregistrementAudio()" title="Rechercher par la voix">
-                                    <i class="fa-solid fa-microphone" id="iconMicWhisper"></i>
-                                </button> 
-                                -->
-                            </div>
+                            </div>                           
                         </div>
-
 
                         <div class="col-md-5">
                             <input type="text" name="caract" class="form-control" placeholder="Caractéristiques de recherche">
@@ -91,12 +84,16 @@ if (isset($_GET['token'])) {
                             <button type="submit" class="btn btn-primary flex-grow-1 fw-bold">
                                 <i class="fa-solid fa-magnifying-glass"></i>
                             </button>
+
                             <button type="button" class="btn btn-outline-secondary" onclick="toggleDarkMode()">
                                 <i class="fa-solid fa-circle-half-stroke"></i>
                             </button>
+                            
+                            <button type="button" class="btn btn-outline-info" onclick="ideeDeRechercheIA()" title="Générer une idée de recherche par IA">
+                                <i class="fa-solid fa-wand-magic-sparkles"></i>
+                            </button>
                         </div>
-                    </form>
-                    
+                    </form>                    
 
                     <div class="mt-3">
                         <h6 class="text-muted mb-2" style="font-size: 0.8rem; text-transform: uppercase;">Filtrer par tags :</h6>
@@ -1093,111 +1090,37 @@ if (isset($_GET['token'])) {
             </script>
 
             <script>
-            // Recherche vocale
-
-            // A continue : ne fonctionne pas 
-
-            /*
-            let mediaRecorder;
-            let audioChunks = [];
-            let estEnregistrementEnCours = false;
-
-            async function toggleEnregistrementAudio() {
-                const icon = document.getElementById('iconMicWhisper');
+            // Générateur de requêtes aléatoires
+            function ideeDeRechercheIA() {
+                const idees = [
+                    "Intelligence artificielle générative 2026",
+                    "Impact de l'IA sur le développement web",
+                    "Tendances cybersécurité et big data",
+                    "Automatisation des tâches par agents autonomes"
+                ];
+                
+                const randomIdee = idees[Math.floor(Math.random() * idees.length)];
                 const input = document.getElementById('inputProduit');
-
-                if (!input) {
-                    alert("Erreur : L'élément 'inputProduit' est introuvable dans le HTML.");
-                    return;
-                }
-
-                if (!estEnregistrementEnCours) {
-                    try {
-                        audioChunks = [];
-                        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-                        
-                        mediaRecorder = new MediaRecorder(stream);
-
-                        mediaRecorder.ondataavailable = (event) => {
-                            if (event.data && event.data.size > 0) {
-                                audioChunks.push(event.data);
-                            }
-                        };
-
-                        mediaRecorder.onstop = async () => {
-                            stream.getTracks().forEach(track => track.stop());
-
-                            if (audioChunks.length === 0) {
-                                alert("Erreur : Aucun flux audio n'a été enregistré.");
-                                input.placeholder = "Que recherchez-vous ?";
-                                return;
-                            }
-
-                            const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
-                            const formData = new FormData();
-                            formData.append('audio', audioBlob, 'voice.webm');
-
-                            input.placeholder = "Transcription par l'IA en cours...";
-
-                            try {
-                                const response = await fetch('transcrire_whisper.php', {
-                                    method: 'POST',
-                                    body: formData
-                                });
-                                
-                                const rawText = await response.text();
-                                console.log("Réponse brute du PHP :", rawText);
-
-                                let data;
-                                try {
-                                    data = JSON.parse(rawText);
-                                } catch (jsonErr) {
-                                    console.error("Le PHP n'a pas renvoyé du JSON valide :", rawText);
-                                    alert("Erreur PHP/Serveur (voir console F12) : " + rawText.substring(0, 100));
-                                    input.placeholder = "Que recherchez-vous ?";
-                                    return;
-                                }
-                                
-                                if (data.status === 'success') {
-                                    input.value = data.texte;
-                                    
-                                    // Lance la recherche immédiatement
-                                    const btnSubmit = document.querySelector('#searchForm button[type="submit"]');
-                                    if (btnSubmit) {
-                                        btnSubmit.click();
-                                    } else {
-                                        document.getElementById('searchForm').submit();
-                                    }
-                                } else {
-                                    alert("Erreur de transcription : " + data.message);
-                                    input.placeholder = "Que recherchez-vous ?";
-                                }
-                            } catch (err) {
-                                console.error("Erreur réseau :", err);
-                                alert("Erreur réseau lors de la communication avec le serveur.");
-                                input.placeholder = "Que recherchez-vous ?";
-                            }
-                        };
-
-                        mediaRecorder.start(250);
-                        estEnregistrementEnCours = true;
-                        icon.classList.remove('fa-microphone');
-                        icon.classList.add('fa-stop', 'text-danger');
-                        input.placeholder = "Parlez, j'écoute... (cliquez à nouveau pour valider)";
-
-                    } catch (err) {
-                        console.error("Erreur d'accès au micro :", err);
-                        alert("Impossible d'accéder au microphone. Vérifiez vos autorisations.");
+                
+                if (input) {
+                    input.value = randomIdee;
+                    
+                    // On cherche le formulaire ou le bouton de soumission bleu avec la loupe
+                    const form = document.getElementById('searchForm') || input.closest('form');
+                    const submitBtn = form ? form.querySelector('button[type="submit"], .btn-primary, button i.fa-search, button i.fa-magnifying-glass') : null;
+                    
+                    if (form) {
+                        // Si on trouve le bouton de recherche, on simule un clic dessus pour lancer la vraie soumission du formulaire
+                        if (submitBtn) {
+                            // S'il est dans un bouton parent
+                            const btn = submitBtn.closest('button') || submitBtn;
+                            btn.click();
+                        } else {
+                            form.submit();
+                        }
                     }
-                } else {
-                    if (mediaRecorder && mediaRecorder.state !== "inactive") {
-                        mediaRecorder.stop();
-                    }
-                    estEnregistrementEnCours = false;
-                    icon.classList.remove('fa-stop', 'text-danger');
-                    icon.classList.add('fa-microphone');
                 }
-            }*/
+            }
             </script>
         </body>
     </html>
