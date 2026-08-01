@@ -71,8 +71,9 @@ if (isset($_GET['token'])) {
                 <div class="card p-4 mb-4 shadow-sm border-0">
                     <form id="searchForm" class="row g-3">
                         <div class="col-md-5">
-                            <div class="input-group">
-                                <input type="text" name="produit" class="form-control" placeholder="Que recherchez-vous ?" id="inputProduit" required> 
+                            <div class="input-group" style="position: relative;">
+                                <input type="text" name="produit" class="form-control" placeholder="Que recherchez-vous ?" id="inputProduit" required autocomplete="off">                                 
+                                <div id="suggestionsBox" class="list-group shadow w-100" style="position: absolute; top: 100%; left: 0; z-index: 1050; display: none;"></div>
                             </div>                           
                         </div>
 
@@ -142,6 +143,10 @@ if (isset($_GET['token'])) {
                         
                         <button id="toggle-view" class="btn btn-dark rounded-pill px-4 shadow-sm">
                             <i class="fa-solid fa-table-list me-2"></i> Mode Exploration
+                        </button>
+
+                        <button type="button" class="btn btn-primary rounded-pill px-4 shadow-sm me-2" onclick="declencherModeZen()" title="Activer / Désactiver le mode zen">
+                            <i class="fa-solid fa-moon"></i> Mode Zen
                         </button>
                     </div>
                 </div>
@@ -1120,6 +1125,106 @@ if (isset($_GET['token'])) {
                         }
                     }
                 }
+            }
+            </script>
+
+            <script>
+            // Déclencher le mode zen 
+            function declencherModeZen() {
+                // Détecter le bouton cliqué
+                const estZenActif = document.body.classList.toggle('zen-mode-actif');                
+                // Masquer les sections inutiles pour ce mode
+                const elementsMasquables = document.querySelectorAll('.alert, .footer, #section-apercu, #section-exploration, #section-archives');
+                
+                elementsMasquables.forEach(el => {
+                    if (el) {
+                        el.style.display = estZenActif ? 'none' : '';
+                    }
+                });
+
+                // Modifie le placeholder du champ de recherche
+                const input = document.getElementById('inputProduit');
+                if (input) {
+                    input.placeholder = estZenActif 
+                        ? "Mode Zen activé" 
+                        : "Que recherchez-vous ?";
+                }
+
+                // Changer le texte du bouton une fois qu'il est cliqué
+                const boutonZen = document.querySelector('button[onclick="declencherModeZen()"]');
+                
+                if (boutonZen) {
+                    if (estZenActif) {
+                        boutonZen.innerHTML = '<i class="fa-solid fa-sun"></i> Mode normal';
+                        boutonZen.classList.remove('btn-primary');
+                        boutonZen.classList.add('btn-outline-primary');
+                    } else {
+                        boutonZen.innerHTML = '<i class="fa-solid fa-moon"></i> Mode Zen';
+                        boutonZen.classList.remove('btn-outline-primary');
+                        boutonZen.classList.add('btn-primary');
+                    }
+                }
+            }
+            </script>
+
+            <script>
+            // Autocomplétion du champs de recherche 
+
+            // Extraction de tous les noms de produits déjà présents dans l'historique PHP de la page
+            const historiqueMotsCles = [
+                <?php 
+                $nomsUniques = array_unique(array_column($recherches, 'nom_produit'));
+                foreach ($nomsUniques as $nom) {
+                    echo '"' . addslashes($nom) . '",';
+                }
+                ?>
+            ];
+
+            const inputProduit = document.getElementById('inputProduit');
+            const suggestionsBox = document.getElementById('suggestionsBox');
+
+            if (inputProduit && suggestionsBox) {
+                inputProduit.addEventListener('input', function() {
+                    const valeur = this.value.toLowerCase().trim();
+                    suggestionsBox.innerHTML = '';
+
+                    if (valeur.length === 0) {
+                        suggestionsBox.style.display = 'none';
+                        return;
+                    }
+
+                    // Filtrer les mots-clés de l'historique qui correspondent à la saisie
+                    const matches = historiqueMotsCles.filter(item => item.toLowerCase().includes(valeur));
+
+                    if (matches.length > 0) {
+                        suggestionsBox.style.display = 'block';
+                        matches.forEach(match => {
+                            const item = document.createElement('a');
+                            item.href = '#';
+                            item.className = 'list-group-item list-group-item-action py-2 px-3';
+                            item.innerText = match;
+                            
+                            // Au clic sur une suggestion, ça remplit l'input et lance la recherche
+                            item.addEventListener('click', function(e) {
+                                e.preventDefault();
+                                inputProduit.value = match;
+                                suggestionsBox.style.display = 'none';
+                                document.getElementById('searchForm').submit();
+                            });
+
+                            suggestionsBox.appendChild(item);
+                        });
+                    } else {
+                        suggestionsBox.style.display = 'none';
+                    }
+                });
+
+                // Fermer la liste si on clique ailleurs sur la page
+                document.addEventListener('click', function(e) {
+                    if (!inputProduit.contains(e.target) && !suggestionsBox.contains(e.target)) {
+                        suggestionsBox.style.display = 'none';
+                    }
+                });
             }
             </script>
         </body>
