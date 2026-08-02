@@ -244,6 +244,9 @@ if (isset($_GET['token'])) {
                                         <i class="fa-solid fa-eye me-1"></i> Voir le résultat
                                     </button>
 
+                                    <button class="btn btn-outline-info btn-sm" onclick="relancerRecherche('<?php echo htmlspecialchars($fiche['nom_produit'], ENT_QUOTES, 'UTF-8'); ?>')" title="Rejouer cette recherche">
+                                       <i class="fa-solid fa-rotate-right"></i>
+                                    </button>
 
                                     <button type="button" class="btn btn-sm btn-link p-0 me-2 btn-favori" onclick="clicFavori(<?php echo $fiche['id']; ?>, this)" title="Épingler en favori" style="position: relative; z-index: 9999; cursor: pointer;">
                                         <i class="<?php echo $classeEtoile; ?> fa-lg fa-star"></i>
@@ -314,7 +317,7 @@ if (isset($_GET['token'])) {
                                             <button class="btn btn-sm btn-outline-danger" onclick="confirmSuppr('supprimer.php?id=<?php echo $donnees['id']; ?>')">
                                                 <i class="fa-solid fa-trash"></i>
                                             </button>
-                                        </td>
+                                        </td>                                
                                     </tr>
                                 <?php endforeach; ?>
                             </tbody>
@@ -1227,5 +1230,22 @@ if (isset($_GET['token'])) {
                 });
             }
             </script>
+
+
+            <script>
+            function relancerRecherche(nomProduit) {
+                const input = document.getElementById('inputProduit');
+
+                if (input) {
+                    input.value = nomProduit;
+                    // Remonte doucement en haut de la page pour voir le champ de recherche
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                    input.focus();
+                    
+                    // Optionnel : soumet automatiquement la recherche
+                    // document.getElementById('searchForm').submit();
+                }
+            }  
+            </script>  
         </body>
     </html>
