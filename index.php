@@ -407,6 +407,10 @@ if (isset($_GET['token'])) {
                                 <i class="fa-solid fa-wand-magic-sparkles me-1"></i> Résumé
                             </button>
 
+                            <button type="button" class="btn btn-sm btn-success text-white px-3 py-2 me-2" id="btn-optimiser-ia" onclick="optimiserFicheActive()">
+                                <i class="fa-solid fa-wand-magic-sparkles me-1"></i> Optimiser par IA
+                            </button>
+
                             <button type="button" class="btn swal-btn-close fw-bold px-5 py-2" data-bs-dismiss="modal">Fermer</button>
                         </div>
 
@@ -844,14 +848,6 @@ if (isset($_GET['token'])) {
                     });
                 }
 
-                const content = btn.getAttribute('data-description');
-                const parts = content.split('[RESUME]');
-                const description = parts[0];
-                const resume = parts[1] || "Aucun résumé disponible.";
-
-                document.getElementById('modal-description').innerHTML = marked.parse(description);
-                document.getElementById('modal-resume-text').innerHTML = marked.parse(resume);
-
                 function updateMetrics(data) {
                     // Statut del'API
                     const statusEl = document.getElementById('api-status');
@@ -1240,12 +1236,52 @@ if (isset($_GET['token'])) {
                     input.value = nomProduit;
                     // Remonte doucement en haut de la page pour voir le champ de recherche
                     window.scrollTo({ top: 0, behavior: 'smooth' });
-                    input.focus();
-                    
-                    // Optionnel : soumet automatiquement la recherche
-                    // document.getElementById('searchForm').submit();
+                    input.focus();                    
                 }
             }  
             </script>  
+
+            <script>
+           function optimiserFicheActive() {
+    const nomProduit = document.getElementById('modal-product-name').innerText;
+    const modalDesc = document.getElementById('modal-description');
+    
+    if (!nomProduit) return;
+
+    modalDesc.innerHTML = '<div class="text-center p-4"><div class="spinner-border text-warning" role="status"></div><p class="mt-2 text-muted">Optimisation et enregistrement en cours...</p></div>';
+
+    let formData = new FormData();
+    // On envoie le nom propre d'origine, sans suffixe pour ne pas corrompre la base
+    formData.append('produit', nomProduit);
+    formData.append('caract', 'Optimisation approfondie et détaillée (contenu optimisé par ia)');
+
+    fetch('generer.php', {
+        method: 'POST',
+        body: formData
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data.status === 'success') {
+            Swal.fire({
+                toast: true,
+                position: 'top-end',
+                icon: 'success',
+                title: 'Fiche optimisée avec succès !',
+                showConfirmButton: false,
+                timer: 800,
+                didClose: () => {
+                    location.reload(); // Recharge instantanément pour afficher la nouvelle entrée dans le tableau
+                }
+            });
+        } else {
+            modalDesc.innerHTML = `<div class="alert alert-danger">Erreur : ${data.message}</div>`;
+        }
+    })
+    .catch(err => {
+        console.error("Erreur :", err);
+        modalDesc.innerHTML = '<div class="alert alert-danger">Erreur de communication avec le serveur.</div>';
+    });
+}
+                        </script>
         </body>
     </html>
