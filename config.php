@@ -19,5 +19,5 @@ try {
 }
 
 // Paramètres d'affichage
-$site_name = "Mon Assistant IA";
+$site_name = "IA Search Engine";
 ?>

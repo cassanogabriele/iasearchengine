@@ -41,7 +41,25 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && !empty($_POST['produit'])) {
         $end_time = microtime(true);
         $execution_time = round(($end_time - $start_time) * 1000); 
         $token_count = round(str_word_count($description) * 1.3);
-        $word_count = str_word_count($description);     
+        $word_count = str_word_count($description);    
+
+        if ($word_count > 150) {
+            $complexite = "Technique / Avancé";
+        } elseif ($word_count > 80) {
+            $complexite = "Intermédiaire";
+        } else {
+            $complexite = "Standard";
+        }
+
+        $textLower = mb_strtolower($description);
+
+        if (strpos($textLower, 'historique') !== false || strpos($textLower, 'depuis') !== false) {
+            $tonalite = "Historique / Narratif";
+        } elseif (strpos($textLower, 'analyse') !== false || strpos($textLower, 'système') !== false) {
+            $tonalite = "Analytique / Neutre";
+        } else {
+            $tonalite = "Professionnel / Informatif";
+        }
         
         if (strpos($caract, 'Optimisation') !== false) {
             $nom .= " (optimisé par IA)";
@@ -56,7 +74,8 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && !empty($_POST['produit'])) {
             $incertitude, 
             $execution_time, 
             $token_count, 
-            $word_count
+            $word_count,
+            $tonalite
         );
 
         echo json_encode([
@@ -67,7 +86,9 @@ if ($_SERVER["REQUEST_METHOD"] === "POST" && !empty($_POST['produit'])) {
             'incertitude' => $incertitude,
             'execution_time' => $execution_time,
             'token_count' => $token_count,
-            'word_count' => $word_count
+            'word_count' => $word_count,
+            'complexite' => $complexite,
+            'tonalite' => $tonalite
         ]);
     } else {
         echo json_encode(['status' => 'error', 'message' => 'L\'IA n\'a rien renvoyé.']);

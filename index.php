@@ -1,8 +1,7 @@
 <?php 
-/*
 ini_set('display_errors', 1);
 error_reporting(E_ALL);
-*/
+
 
 require_once 'fonctions.php'; 
 
@@ -240,7 +239,11 @@ if (isset($_GET['token'])) {
                                     <button class="btn btn-outline-primary btn-voir-resultat" 
                                             data-nom="<?php echo htmlspecialchars($fiche['nom_produit'], ENT_QUOTES, 'UTF-8'); ?>"
                                             data-description="<?php echo htmlspecialchars($fiche['description_ia'], ENT_QUOTES, 'UTF-8'); ?>"
-                                            data-resume="<?php echo htmlspecialchars($fiche['resume'], ENT_QUOTES, 'UTF-8'); ?>"> 
+                                            data-resume="<?php echo htmlspecialchars($fiche['resume'], ENT_QUOTES, 'UTF-8'); ?>"
+                                            data-time="<?php echo htmlspecialchars($fiche['execution_time'] ?? '0', ENT_QUOTES, 'UTF-8'); ?>"
+                                            data-tokens="<?php echo htmlspecialchars($fiche['token_count'] ?? '0', ENT_QUOTES, 'UTF-8'); ?>"
+                                            data-words="<?php echo htmlspecialchars($fiche['word_count'] ?? '0', ENT_QUOTES, 'UTF-8'); ?>"
+                                            data-tonalite="<?php echo htmlspecialchars(!empty($fiche['tonalite']) ? $fiche['tonalite'] : 'Non définie', ENT_QUOTES, 'UTF-8'); ?>">
                                         <i class="fa-solid fa-eye me-1"></i> Voir le résultat
                                     </button>
 
@@ -419,9 +422,11 @@ if (isset($_GET['token'])) {
                                 <span><i class="fa-solid fa-microchip me-1"></i>Status : <span id="api-status">OK</span></span>
                                 <span><i class="fa-solid fa-clock me-1"></i>Latence: <span id="gen-time">0</span> ms</span>
                             </div>
+
                             <div class="mt-1">
                                 <span><i class="fa-solid fa-font me-1"></i>Tokens: <span id="token-count">0</span></span>
                                 <span class="ms-3"><i class="fa-solid fa-pen-nib me-1"></i>Mots: <span id="word-count">0</span></span>
+                                <span class="ms-3"><i class="fa-solid fa-quote-left me-1"></i>Tonalité: <span id="tonalite-info">Aucune</span></span>
                             </div>
                         </div>
                     </div>
@@ -532,7 +537,7 @@ if (isset($_GET['token'])) {
             <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
             <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
             <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-            <script>
+Complexité            <script>
                 const toggleBtn = document.getElementById('toggle-view');
                 const sectionApercu = document.getElementById('section-apercu');
                 const sectionExplo = document.getElementById('section-exploration');
@@ -564,11 +569,13 @@ if (isset($_GET['token'])) {
                         const time = this.getAttribute('data-time') || '0';
                         const tokens = this.getAttribute('data-tokens') || '0';
                         const words = this.getAttribute('data-words') || '0'; 
+                        const tonalite = this.getAttribute('data-tonalite') || 'Aucune';
 
+                        // Injection dans la console de métriques de la modale
                         document.getElementById('gen-time').innerText = time;
                         document.getElementById('token-count').innerText = tokens;
                         document.getElementById('word-count').innerText = words;
-
+                        document.getElementById('tonalite-info').innerText = tonalite;
 
                         // Stockage dans des variables globales pour que le bouton bascule y accède
                         window.currentDesc = desc;
@@ -582,7 +589,6 @@ if (isset($_GET['token'])) {
                         // Réinitialisation du bouton de bascule
                         const btnAction = document.getElementById('btn-generer-resume');
                         btnAction.dataset.state = "description";
-                        // On remet l'icône + le texte
                         btnAction.innerHTML = '<i class="fa-solid fa-wand-magic-sparkles me-1"></i> Résumé';
 
                         new bootstrap.Modal(document.getElementById('previewModal')).show();
@@ -1242,46 +1248,58 @@ if (isset($_GET['token'])) {
             </script>  
 
             <script>
-           function optimiserFicheActive() {
-    const nomProduit = document.getElementById('modal-product-name').innerText;
-    const modalDesc = document.getElementById('modal-description');
-    
-    if (!nomProduit) return;
+            function optimiserFicheActive() {
+                const nomProduit = document.getElementById('modal-product-name').innerText;
+                const modalDesc = document.getElementById('modal-description');
+                
+                if (!nomProduit) return;
 
-    modalDesc.innerHTML = '<div class="text-center p-4"><div class="spinner-border text-warning" role="status"></div><p class="mt-2 text-muted">Optimisation et enregistrement en cours...</p></div>';
+                modalDesc.innerHTML = '<div class="text-center p-4"><div class="spinner-border text-warning" role="status"></div><p class="mt-2 text-muted">Optimisation et enregistrement en cours...</p></div>';
 
-    let formData = new FormData();
-    // On envoie le nom propre d'origine, sans suffixe pour ne pas corrompre la base
-    formData.append('produit', nomProduit);
-    formData.append('caract', 'Optimisation approfondie et détaillée (contenu optimisé par ia)');
+                let formData = new FormData();
+                // On envoie le nom propre d'origine, sans suffixe pour ne pas corrompre la base
+                formData.append('produit', nomProduit);
+                formData.append('caract', 'Optimisation approfondie et détaillée (contenu optimisé par ia)');
 
-    fetch('generer.php', {
-        method: 'POST',
-        body: formData
-    })
-    .then(res => res.json())
-    .then(data => {
-        if (data.status === 'success') {
-            Swal.fire({
-                toast: true,
-                position: 'top-end',
-                icon: 'success',
-                title: 'Fiche optimisée avec succès !',
-                showConfirmButton: false,
-                timer: 800,
-                didClose: () => {
-                    location.reload(); // Recharge instantanément pour afficher la nouvelle entrée dans le tableau
-                }
-            });
-        } else {
-            modalDesc.innerHTML = `<div class="alert alert-danger">Erreur : ${data.message}</div>`;
-        }
-    })
-    .catch(err => {
-        console.error("Erreur :", err);
-        modalDesc.innerHTML = '<div class="alert alert-danger">Erreur de communication avec le serveur.</div>';
-    });
-}
-                        </script>
+                fetch('generer.php', {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(res => res.json())
+                .then(data => {
+                    if (data.status === 'success') {
+                        Swal.fire({
+                            toast: true,
+                            position: 'top-end',
+                            icon: 'success',
+                            title: 'Fiche optimisée avec succès !',
+                            showConfirmButton: false,
+                            timer: 800,
+                            didClose: () => {
+                                location.reload(); // Recharge instantanément pour afficher la nouvelle entrée dans le tableau
+                            }
+                        });
+                    } else {
+                        modalDesc.innerHTML = `<div class="alert alert-danger">Erreur : ${data.message}</div>`;
+                    }
+                })
+                .catch(err => {
+                    console.error("Erreur :", err);
+                    modalDesc.innerHTML = '<div class="alert alert-danger">Erreur de communication avec le serveur.</div>';
+                });
+            }
+            </script>
+
+            <script>
+            const time = this.getAttribute('data-time') || '0';
+            const tokens = this.getAttribute('data-tokens') || '0';
+            const words = this.getAttribute('data-words') || '0';
+            const tonalite = this.getAttribute('data-tonalite') || 'Aucune';
+
+            document.getElementById('gen-time').innerText = time;
+            document.getElementById('token-count').innerText = tokens;
+            document.getElementById('word-count').innerText = words;
+            document.getElementById('tonalite-info').innerText = tonalite;
+            </script>
         </body>
     </html>

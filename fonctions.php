@@ -40,12 +40,12 @@ function verifierCache($nom_produit, $caract) {
 }
 
  // Sauvegarde de la nouvelle recherche en BDD avec les nouveaux champs
-function sauvegarderRecherche($nom, $caract, $description, $resume, $fiabilite, $incertitude, $exec_time, $tokens, $mots) {
+function sauvegarderRecherche($nom, $caract, $description, $resume, $fiabilite, $incertitude, $exec_time, $tokens, $mots, $tonalite) {
     global $pdo;
 
     $sql = "INSERT INTO recherches
-            (nom_produit, caract_cle, description_ia, resume, date_creation, archive, fiabilite, incertitude, execution_time, token_count, word_count)
-            VALUES (?, ?, ?, ?, NOW(), 0, ?, ?, ?, ?, ?)";  
+            (nom_produit, caract_cle, description_ia, resume, date_creation, archive, fiabilite, incertitude, execution_time, token_count, word_count, tonalite)
+            VALUES (?, ?, ?, ?, NOW(), 0, ?, ?, ?, ?, ?, ?)";  
 
     $stmt = $pdo->prepare($sql);
 
@@ -58,7 +58,8 @@ function sauvegarderRecherche($nom, $caract, $description, $resume, $fiabilite, 
         $incertitude,  
         $exec_time,    
         $tokens,      
-        $mots 
+        $mots,
+        $tonalite  
     ]);
 
     $recherche_id = $pdo->lastInsertId();
@@ -68,7 +69,7 @@ function sauvegarderRecherche($nom, $caract, $description, $resume, $fiabilite, 
     extraireEtSauvegarderTags($pdo, $recherche_id, $texte_complet);  
 
     return $recherche_id;
-} 
+}
 
 function extraireEtSauvegarderTags($pdo, $recherche_id, $texte) {
     try {
