@@ -124,28 +124,32 @@ if (isset($_GET['token'])) {
                     Temps de génération : <span id="valeur-temps">0</span> ms
                 </button>
 
-                <div class="d-flex justify-content-between align-items-center mb-4">
+                <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
                     <h3 id="view-title">Dernières recherches</h3>
 
-                    <div>      
-                        <a href="statistiques.php" class="btn btn-info text-white">
-                            <i class="fa-solid fa-chart-line"></i> Voir les Statistiques
+                    <div class="d-flex flex-nowrap align-items-center gap-2 overflow-x-auto pb-2">      
+                        <a href="statistiques.php" class="btn btn-info text-white text-nowrap">
+                            <i class="fa-solid fa-chart-line"></i> Statistiques
                         </a>
 
-                        <button class="btn btn-warning rounded-pill px-4 shadow-sm text-white" onclick="lancerComparaisonIA()">
-                            <i class="fa-solid fa-code-compare me-2"></i> Comparer 
+                        <button class="btn btn-secondary rounded-pill px-3 shadow-sm text-white text-nowrap" onclick="lancerBriefingIA()">
+                            <i class="fa-solid fa-chart-pie me-1"></i> Briefing IA
                         </button>
 
-                        <button id="toggle-archives" class="btn btn-success rounded-pill px-4 shadow-sm me-2">
-                            <i class="fa-solid fa-eye me-2"></i> Recherches archivées
+                        <button class="btn btn-warning rounded-pill px-3 shadow-sm text-white text-nowrap" onclick="lancerComparaisonIA()">
+                            <i class="fa-solid fa-code-compare me-1"></i> Comparer 
+                        </button>
+
+                        <button id="toggle-archives" class="btn btn-success rounded-pill px-3 shadow-sm text-nowrap">
+                            <i class="fa-solid fa-eye me-1"></i> Archivées
                         </button>
                         
-                        <button id="toggle-view" class="btn btn-dark rounded-pill px-4 shadow-sm">
-                            <i class="fa-solid fa-table-list me-2"></i> Mode Exploration
+                        <button id="toggle-view" class="btn btn-dark rounded-pill px-3 shadow-sm text-nowrap">
+                            <i class="fa-solid fa-table-list me-1"></i> Exploration
                         </button>
 
-                        <button type="button" class="btn btn-primary rounded-pill px-4 shadow-sm me-2" onclick="declencherModeZen()" title="Activer / Désactiver le mode zen">
-                            <i class="fa-solid fa-moon"></i> Mode Zen
+                        <button type="button" class="btn btn-primary rounded-pill px-3 shadow-sm text-nowrap" onclick="declencherModeZen()">
+                            <i class="fa-solid fa-moon"></i> Zen
                         </button>
                     </div>
                 </div>
@@ -533,11 +537,36 @@ if (isset($_GET['token'])) {
                     </div>
                 </div>
             </div>
+
+            <div class="modal fade" id="briefingModal" tabindex="-1" aria-labelledby="briefingModalLabel" aria-hidden="true">
+                <div class="modal-dialog modal-lg modal-dialog-centered">
+                    <div class="modal-content text-light border-0" style="background: #1e1e24;">
+                        <div class="modal-header border-secondary">
+                            <h5 class="modal-title" id="briefingModalLabel">
+                                <i class="fa-solid fa-wand-magic-sparkles me-2 text-info"></i> Briefing & Tendances de vos recherches
+                            </h5>
+                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Fermer"></button>
+                        </div>
+                        <div class="modal-body p-4" id="briefingModalBody">
+                            <div class="text-center p-5">
+                                <div class="spinner-border text-info" role="status"></div>
+                                <p class="mt-3 text-muted">L'IA analyse vos tendances de recherche...</p>
+                            </div>
+                        </div>
+                        <div class="modal-footer border-secondary">
+                            <button type="button" class="btn btn-outline-light btn-sm" onclick="copierBriefing()">
+                                <i class="fa-solid fa-copy me-1"></i> Copier
+                            </button>
+                            <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Fermer</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
             
             <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
             <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
             <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-Complexité            <script>
+             <script>
                 const toggleBtn = document.getElementById('toggle-view');
                 const sectionApercu = document.getElementById('section-apercu');
                 const sectionExplo = document.getElementById('section-exploration');
@@ -1291,15 +1320,97 @@ Complexité            <script>
             </script>
 
             <script>
-            const time = this.getAttribute('data-time') || '0';
-            const tokens = this.getAttribute('data-tokens') || '0';
-            const words = this.getAttribute('data-words') || '0';
-            const tonalite = this.getAttribute('data-tonalite') || 'Aucune';
+            async function lancerBriefingIA() {                
+                const bodyElement = document.getElementById('briefingModalBody');
+                if (!bodyElement) return;
 
-            document.getElementById('gen-time').innerText = time;
-            document.getElementById('token-count').innerText = tokens;
-            document.getElementById('word-count').innerText = words;
-            document.getElementById('tonalite-info').innerText = tonalite;
+                // 1. Afficher un loader propre à chaque nouveau clic pour indiquer que ça calcule
+                bodyElement.innerHTML = `
+                    <div class="text-center p-5">
+                        <div class="spinner-border text-info" role="status"></div>
+                        <p class="mt-3 text-muted">L'IA analyse vos tendances de recherche...</p>
+                    </div>
+                `;
+
+                // 2. Ouvrir la modale
+                const modalElement = document.getElementById('briefingModal');
+                const myModal = new bootstrap.Modal(modalElement);
+                myModal.show();
+
+                try {
+                    const response = await fetch('tendance.php', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        }
+                    });
+
+                    if (!response.ok) {
+                        throw new Error(`Erreur HTTP : ${response.status}`);
+                    }
+
+                    const data = await response.json();
+                    console.log("Réponse reçue du serveur :", data);
+
+                    if (data.status === 'success') {
+                        const contenuHtml = typeof marked !== 'undefined' ? marked.parse(data.briefing) : data.briefing;
+                        bodyElement.innerHTML = `<div class="markdown-content" style="line-height: 1.6;" id="texteBriefingBrut">${contenuHtml}</div>`;
+                    } else {
+                        bodyElement.innerHTML = `<div class="alert alert-danger">Erreur : ${data.message || "Impossible de générer le briefing."}</div>`;
+                    }
+
+                } catch (error) {
+                    console.error("Erreur critique lors de l'appel AJAX :", error);
+                    bodyElement.innerHTML = `
+                        <div class="alert alert-danger">
+                            <strong>Erreur de communication :</strong> ${error.message}
+                        </div>`;
+                }
+            }
+
+            function ouvrirModaleBriefing(texteBriefing) {
+                const modalElement = document.getElementById('briefingModal');
+                if (!modalElement) {
+                    console.error("L'élément HTML #briefingModal est introuvable dans la page !");
+                    return;
+                }
+
+                // Formatage Markdown si 'marked' est disponible, sinon texte brut
+                const contenuHtml = typeof marked !== 'undefined' ? marked.parse(texteBriefing) : texteBriefing;
+                
+                const bodyElement = document.getElementById('briefingModalBody');
+                if (bodyElement) {
+                    bodyElement.innerHTML = `<div class="markdown-content" style="line-height: 1.6;">${contenuHtml}</div>`;
+                }
+                
+                // Déclenchement de l'affichage de la modale Bootstrap
+                var myModal = new bootstrap.Modal(modalElement);
+                myModal.show();
+            }
+
+            // Fonction pour copier le texte du briefing dans le presse-papier
+            function copierBriefing() {
+                const contenuDiv = document.getElementById('briefingModalBody');
+                if (!contenuDiv) return;
+
+                // Récupère le texte brut du briefing affiché
+                const texteACopier = contenuDiv.innerText || contenuDiv.textContent;
+
+                navigator.clipboard.writeText(texteACopier).then(() => {
+                    // Petit feedback visuel temporaire sur le bouton Copier
+                    const btnCopier = document.querySelector('button[onclick="copierBriefing()"]');
+                    if (btnCopier) {
+                        const originalHTML = btnCopier.innerHTML;
+                        btnCopier.innerHTML = '<i class="fa-solid fa-check me-1"></i> Copié !';
+                        setTimeout(() => {
+                            btnCopier.innerHTML = originalHTML;
+                        }, 2000);
+                    }
+                }).catch(err => {
+                    console.error('Erreur lors de la copie :', err);
+                    alert('Impossible de copier le texte.');
+                });
+            }
             </script>
         </body>
     </html>
