@@ -241,6 +241,7 @@ if (isset($_GET['token'])) {
                                     </button>
 
                                     <button class="btn btn-outline-primary btn-voir-resultat" 
+                                            data-id="<?php echo $fiche['id']; ?>"
                                             data-nom="<?php echo htmlspecialchars($fiche['nom_produit'], ENT_QUOTES, 'UTF-8'); ?>"
                                             data-description="<?php echo htmlspecialchars($fiche['description_ia'], ENT_QUOTES, 'UTF-8'); ?>"
                                             data-resume="<?php echo htmlspecialchars($fiche['resume'], ENT_QUOTES, 'UTF-8'); ?>"
@@ -392,17 +393,30 @@ if (isset($_GET['token'])) {
                 </button>
             </div>
 
-            <div class="modal fade swal-bootstrap-modal" id="previewModal" tabindex="-1" aria-hidden="true">
+           <div class="modal fade swal-bootstrap-modal" id="previewModal" tabindex="-1" aria-hidden="true">
                 <div class="modal-dialog modal-lg modal-dialog-centered">
                     <div class="modal-content text-light border-0 p-4">
                         <div class="modal-body text-center p-0">
                             <div class="swal-bootstrap-icon swal-bootstrap-success mb-4">
                                 <i class="fa-solid fa-brain"></i>
                             </div>
+                            
                             <h3 class="fw-bold text-white mb-3" id="modal-product-name" style="font-size: 1.8rem;"></h3>
                             
                             <div id="modal-description" class="md-render text-start p-4 rounded-3 mb-4" style="background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.05); max-height: 300px; overflow-y: auto;"></div>
                         
+                            <div id="chat-container" class="text-start mb-4 p-3 rounded-3" style="background: rgba(0, 0, 0, 0.2); border: 1px solid rgba(255, 255, 255, 0.05);">                                
+                                <h6 class="text-dark mb-2" style="font-size: 0.9rem;"><i class="fa-solid fa-comments me-1"></i> Poser une question sur cette analyse</h6>
+
+                                <div id="chat-history" class="mb-2 p-2 bg-black rounded border border-secondary text-light" style="height: 120px; overflow-y: auto; font-size: 0.85rem;">
+                                    <span class="text-white fst-italic">En attente de la réponse...</span>
+                                </div>
+
+                                <div class="input-group input-group-sm">
+                                    <input type="text" id="chat-input" class="form-control bg-white text-dark border-secondary" placeholder="Votre question...">
+                                    <button class="btn btn-dark fw-bold px-3" type="button" onclick="poserQuestion()">Envoyer</button>
+                                </div>
+                            </div>
                         </div>
 
                         <div class="d-flex justify-content-center w-100 mb-4">
@@ -592,6 +606,7 @@ if (isset($_GET['token'])) {
 
                 document.querySelectorAll('.btn-voir-resultat').forEach(btn => {
                     btn.addEventListener('click', function() {
+                        const id = this.getAttribute('data-id'); // <--- 1. Récupération de l'ID
                         const nom = this.getAttribute('data-nom');
                         const desc = this.getAttribute('data-description');
                         const resume = this.getAttribute('data-resume'); 
@@ -606,9 +621,16 @@ if (isset($_GET['token'])) {
                         document.getElementById('word-count').innerText = words;
                         document.getElementById('tonalite-info').innerText = tonalite;
 
-                        // Stockage dans des variables globales pour que le bouton bascule y accède
+                        // Stockage dans des variables globales
+                        window.currentId = id; // <--- 2. Stockage de l'ID pour le chat
                         window.currentDesc = desc;
                         window.currentResume = (resume && resume.trim() !== "") ? resume : "Aucun résumé disponible.";
+
+                        // Réinitialisation de la zone de chat à l'ouverture
+                        const chatHistory = document.getElementById('chat-history');
+                        if (chatHistory) {
+                            chatHistory.innerHTML = '<span class="text-white fst-italic">En attente de la réponse...</span>';
+                        }
 
                         // Injection initiale
                         document.getElementById('modal-product-name').innerText = nom;
@@ -1410,6 +1432,68 @@ if (isset($_GET['token'])) {
                     console.error('Erreur lors de la copie :', err);
                     alert('Impossible de copier le texte.');
                 });
+            }
+            </script>
+
+            <script>
+            // Chat 
+            window.currentId = this.closest('.preview-item') 
+                ? this.closest('.preview-item').querySelector('.select-fiche').value 
+                : null;
+
+            // Nettoie le chat à chaque ouverture
+            document.getElementById('chat-history').innerHTML = ''; 
+
+            async function poserQuestion() {
+                const input = document.getElementById('chat-input');
+                const question = input.value.trim();
+                const chatHistory = document.getElementById('chat-history');
+
+                if (!question) return;
+                if (!window.currentId) {
+                    chatHistory.innerHTML += `<div class="text-danger mt-1">Erreur : ID de fiche introuvable. Ouvrez la modale correctement.</div>`;
+                    return;
+                }
+
+                // Effacer le message par défaut au premier message
+                if (chatHistory.querySelector('.text-muted')) {
+                    chatHistory.innerHTML = '';
+                }
+
+                // Afficher la question de l'utilisateur dans le "carré noir"
+                chatHistory.innerHTML += `<div class="mb-1 text-white"><b>Vous :</b> ${question}</div>`;
+                input.value = '';
+
+                // Afficher un loader temporaire
+                chatHistory.innerHTML += `<div id="loading-ai" class="mb-1 text-info fst-italic">L'IA réfléchit...</div>`;
+                chatHistory.scrollTop = chatHistory.scrollHeight;
+
+                const formData = new FormData();
+                formData.append('id', window.currentId);
+                formData.append('question', question);
+
+                try {
+                    const response = await fetch('discuter_fiche.php', {
+                        method: 'POST',
+                        body: formData
+                    });
+                    const data = await response.json();
+
+                    // Supprimer le loader
+                    document.getElementById('loading-ai').remove();
+
+                    if (data.status === 'success') {
+                        // Afficher la réponse de l'IA dans le carré noir
+                        chatHistory.innerHTML += `<div class="mb-2 text-warning"><b>IA :</b> ${data.reponse}</div>`;
+                    } else {
+                        chatHistory.innerHTML += `<div class="mb-2 text-danger"><b>Erreur :</b> ${data.message}</div>`;
+                    }
+                } catch (e) {
+                    if (document.getElementById('loading-ai')) document.getElementById('loading-ai').remove();
+                    chatHistory.innerHTML += `<div class="mb-2 text-danger">Erreur de communication avec le serveur.</div>`;
+                }
+
+                chatHistory.scrollTop = chatHistory.scrollHeight;
             }
             </script>
         </body>
