@@ -408,8 +408,7 @@ if (isset($_GET['token'])) {
                             <div id="chat-container" class="text-start mb-4 p-3 rounded-3" style="background: rgba(0, 0, 0, 0.2); border: 1px solid rgba(255, 255, 255, 0.05);">                                
                                 <h6 class="text-dark mb-2" style="font-size: 0.9rem;"><i class="fa-solid fa-comments me-1"></i> Poser une question sur cette analyse</h6>
 
-                                <div id="chat-history" class="mb-2 p-2 bg-black rounded border border-secondary text-light" style="height: 120px; overflow-y: auto; font-size: 0.85rem;">
-                                    <span class="text-white fst-italic">En attente de la réponse...</span>
+                                <div id="chat-history" class="mb-2 p-2 bg-black rounded border border-secondary text-light" style="height: 120px; overflow-y: auto; font-size: 0.85rem;">               
                                 </div>
 
                                 <div class="input-group input-group-sm">
@@ -430,6 +429,10 @@ if (isset($_GET['token'])) {
 
                             <button type="button" class="btn btn-sm btn-success text-white px-3 py-2 me-2" id="btn-optimiser-ia" onclick="optimiserFicheActive()">
                                 <i class="fa-solid fa-wand-magic-sparkles me-1"></i> Optimiser par IA
+                            </button>
+
+                            <button type="button" class="btn btn-sm btn-warning text-white px-3 py-2 me-2" id="btn-auditer-ia" onclick="auditerFicheActive()">
+                                <i class="fa-solid fa-triangle-exclamation me-1"></i> Audit critique
                             </button>
 
                             <button type="button" class="btn swal-btn-close fw-bold px-5 py-2" data-bs-dismiss="modal">Fermer</button>
@@ -628,8 +631,9 @@ if (isset($_GET['token'])) {
 
                         // Réinitialisation de la zone de chat à l'ouverture
                         const chatHistory = document.getElementById('chat-history');
+
                         if (chatHistory) {
-                            chatHistory.innerHTML = '<span class="text-white fst-italic">En attente de la réponse...</span>';
+                            chatHistory.innerHTML = '';
                         }
 
                         // Injection initiale
@@ -1450,6 +1454,7 @@ if (isset($_GET['token'])) {
                 const chatHistory = document.getElementById('chat-history');
 
                 if (!question) return;
+
                 if (!window.currentId) {
                     chatHistory.innerHTML += `<div class="text-danger mt-1">Erreur : ID de fiche introuvable. Ouvrez la modale correctement.</div>`;
                     return;
@@ -1493,6 +1498,38 @@ if (isset($_GET['token'])) {
                     chatHistory.innerHTML += `<div class="mb-2 text-danger">Erreur de communication avec le serveur.</div>`;
                 }
 
+                chatHistory.scrollTop = chatHistory.scrollHeight;
+            }
+            </script>
+
+            <script>
+            async function auditerFicheActive() {
+                if (!window.currentId) return;
+
+                const chatHistory = document.getElementById('chat-history');
+                if (chatHistory.querySelector('.text-muted')) chatHistory.innerHTML = '';
+
+                chatHistory.innerHTML += `<div class="mb-1 text-info fst-italic">L'auditeur IA analyse les failles du texte...</div>`;
+                chatHistory.scrollTop = chatHistory.scrollHeight;
+
+                const formData = new FormData();
+                formData.append('id', window.currentId);
+
+                try {
+                    const res = await fetch('auditer_fiche.php', { method: 'POST', body: formData });
+                    const data = await res.json();
+                    
+                    // Supprimer le loader
+                    chatHistory.querySelector('.text-info').remove();
+
+                    if (data.status === 'success') {
+                        chatHistory.innerHTML += `<div class="mb-2 p-2 rounded bg-opacity-15 border border-warning text-light"><b>🔍 Audit critique :</b> ${data.audit}</div>`;
+                    } else {
+                        chatHistory.innerHTML += `<div class="mb-2 text-danger">Erreur lors de l'audit.</div>`;
+                    }
+                } catch (e) {
+                    chatHistory.innerHTML += `<div class="mb-2 text-danger">Erreur de communication.</div>`;
+                }
                 chatHistory.scrollTop = chatHistory.scrollHeight;
             }
             </script>
