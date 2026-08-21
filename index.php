@@ -418,24 +418,30 @@ if (isset($_GET['token'])) {
                             </div>
                         </div>
 
-                        <div class="d-flex justify-content-center w-100 mb-4">
-                            <button type="button" class="btn btn-outline-light fw-bold px-4 py-2 me-2 text-black" onclick="copierTexte()">
+                        <div class="d-flex justify-content-center align-items-center flex-wrap gap-2 w-100 mb-4">
+                            <button type="button" class="btn btn-sm btn-outline-secondary px-3 py-1.5" onclick="copierTexte()">
                                 <i class="fa-solid fa-copy me-1"></i> Copier
                             </button>
 
-                            <button type="button" class="btn btn-sm btn-info text-light px-4 py-2 me-2" id="btn-generer-resume">
+                            <button type="button" class="btn btn-sm btn-info px-3 py-1.5 text-whhite" id="btn-generer-resume" data-state="description">
                                 <i class="fa-solid fa-wand-magic-sparkles me-1"></i> Résumé
                             </button>
 
-                            <button type="button" class="btn btn-sm btn-success text-white px-3 py-2 me-2" id="btn-optimiser-ia" onclick="optimiserFicheActive()">
-                                <i class="fa-solid fa-wand-magic-sparkles me-1"></i> Optimiser par IA
+                            <button type="button" class="btn btn-sm btn-secondary px-3 py-1.5" onclick="lireTexteIA()">
+                                <i class="fa-solid fa-volume-high me-1"></i> Écouter
                             </button>
 
-                            <button type="button" class="btn btn-sm btn-warning text-white px-3 py-2 me-2" id="btn-auditer-ia" onclick="auditerFicheActive()">
-                                <i class="fa-solid fa-triangle-exclamation me-1"></i> Audit critique
+                            <button type="button" class="btn btn-sm btn-success px-3 py-1.5" id="btn-optimiser-ia" onclick="optimiserFicheActive()">
+                                <i class="fa-solid fa-wand-magic-sparkles me-1"></i> Optimiser
                             </button>
 
-                            <button type="button" class="btn swal-btn-close fw-bold px-5 py-2" data-bs-dismiss="modal">Fermer</button>
+                            <button type="button" class="btn btn-sm btn-warning px-3 py-1.5 text-white" id="btn-auditer-ia" onclick="auditerFicheActive()">
+                                <i class="fa-solid fa-triangle-exclamation me-1"></i> Audit
+                            </button>
+
+                            <button type="button" class="btn btn-sm btn-primary px-4 py-1.5" data-bs-dismiss="modal">
+                                <i class="fa-solid fa-xmark me-1"></i> Fermer
+                            </button>
                         </div>
 
                         <div id="metrics-console" class="p-3 bg-dark border border-secondary rounded shadow-sm font-monospace text-start" style="font-size: 0.75rem; color: #00ff41;">
@@ -1531,6 +1537,53 @@ if (isset($_GET['token'])) {
                     chatHistory.innerHTML += `<div class="mb-2 text-danger">Erreur de communication.</div>`;
                 }
                 chatHistory.scrollTop = chatHistory.scrollHeight;
+            }
+            </script>
+
+            <script>
+            function lireTexteIA() {
+                // Vérifie si l'API Speech Synthesis est supportée par le navigateur
+                if (!('speechSynthesis' in window)) {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Non supporté',
+                        text: 'Votre navigateur ne supporte pas la synthèse vocale.',
+                        toast: true,
+                        position: 'top-end',
+                        timer: 2000,
+                        showConfirmButton: false
+                    });
+                    return;
+                }
+
+                // Annule une lecture en cours si l'utilisateur clique plusieurs fois
+                window.speechSynthesis.cancel();
+
+                // Récupère le texte actuellement affiché dans la modale (description ou résumé)
+                const texteAAfficher = document.getElementById('modal-description').innerText;
+
+                if (!texteAAfficher || texteAAfficher.trim() === "") return;
+
+                const utterance = new SpeechSynthesisUtterance(texteAAfficher);
+                utterance.lang = 'fr-FR'; // Langue française
+                utterance.rate = 1.0; // Vitesse de lecture normale
+
+                // Petit feedback visuel sur le bouton
+                const btn = document.querySelector('button[onclick="lireTexteIA()"]');
+                const originalHTML = btn.innerHTML;
+                btn.innerHTML = '<i class="fa-solid fa-stop me-1"></i> Arrêter';
+                btn.onclick = function() {
+                    window.speechSynthesis.cancel();
+                    btn.innerHTML = originalHTML;
+                    btn.setAttribute('onclick', 'lireTexteIA()');
+                };
+
+                utterance.onend = function() {
+                    btn.innerHTML = originalHTML;
+                    btn.setAttribute('onclick', 'lireTexteIA()');
+                };
+
+                window.speechSynthesis.speak(utterance);
             }
             </script>
         </body>
