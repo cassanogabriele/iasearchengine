@@ -66,6 +66,18 @@ if (isset($_GET['token'])) {
                         Ce site est un site de démonstration, ayant pour objectif de présenter mes compétences en intégration d'IA.
                     </div>
                 </div>
+
+                <div class="mb-4 w-100">
+                    <div id="ollama-status-widget" class="d-flex align-items-center px-3 py-2 bg-dark rounded border border-secondary text-light w-100 shadow-sm" style="font-size: 0.9rem;">
+                        <span id="ollama-indicator" class="spinner-border spinner-border-sm text-warning me-3 flex-shrink-0" role="status"></span>
+                        <div class="d-flex flex-column w-100">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <span id="ollama-status-text" class="fw-bold text-muted">Vérification d'Ollama...</span>
+                            </div>
+                            <small id="ollama-models" class="text-info mt-1" style="font-size: 0.8rem; display: none;"></small>
+                        </div>
+                    </div>
+                </div>
                 
                 <div class="card p-4 mb-4 shadow-sm border-0">
                     <form id="searchForm" class="row g-3">
@@ -1585,6 +1597,61 @@ if (isset($_GET['token'])) {
 
                 window.speechSynthesis.speak(utterance);
             }
+            </script>
+
+            <script>
+            // Vérification du statut Ollama         
+            async function checkOllamaStatus() {
+                const indicator = document.getElementById('ollama-indicator');
+                const statusText = document.getElementById('ollama-status-text');
+                const modelsText = document.getElementById('ollama-models');
+
+                try {
+                    // On appelle notre script PHP intermédiaire pour éviter le CORS
+                    const response = await fetch('check_ollama.php', {
+                        method: 'GET',
+                        headers: { 'Content-Type': 'application/json' }
+                    });
+
+                    if (response.ok) {
+                        const data = await response.json();
+                        const models = data.models || [];
+                        
+                        indicator.className = 'rounded-circle bg-success me-2';
+                        indicator.style.width = '10px';
+                        indicator.style.height = '10px';
+                        indicator.innerHTML = '';
+                        
+                        statusText.textContent = 'Ollama : En ligne';
+                        statusText.className = 'fw-bold text-success';
+
+                        if (models.length > 0) {
+                            const modelNames = models.map(m => m.name).join(', ');
+                            modelsText.textContent = `Modèles disponibles : ${modelNames}`;
+                            modelsText.style.display = 'block';
+                        } else {
+                            modelsText.textContent = 'Aucun modèle chargé';
+                            modelsText.style.display = 'block';
+                        }
+                    } else {
+                        throw new Error('Erreur serveur');
+                    }
+                } catch (error) {
+                    indicator.className = 'rounded-circle bg-danger me-2';
+                    indicator.style.width = '10px';
+                    indicator.style.height = '10px';
+                    indicator.innerHTML = '';
+                    
+                    statusText.textContent = 'Ollama : Hors ligne';
+                    statusText.className = 'fw-bold text-danger';
+                    modelsText.style.display = 'none';
+                }
+            }
+
+            document.addEventListener('DOMContentLoaded', () => {
+                checkOllamaStatus();
+                setInterval(checkOllamaStatus, 10000);
+            });
             </script>
         </body>
     </html>
