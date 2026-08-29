@@ -144,6 +144,10 @@ if (isset($_GET['token'])) {
                             <i class="fa-solid fa-chart-line"></i> Statistiques
                         </a>
 
+                        <button type="button" class="btn btn-danger rounded-pill px-3 shadow-sm text-white text-nowrap" onclick="exporterHistoriquePDF()">
+                            <i class="fa-solid fa-file-pdf me-1"></i> Exporter PDF
+                        </button>
+
                         <button class="btn btn-secondary rounded-pill px-3 shadow-sm text-white text-nowrap" onclick="lancerBriefingIA()">
                             <i class="fa-solid fa-chart-pie me-1"></i> Briefing IA
                         </button>
@@ -601,7 +605,8 @@ if (isset($_GET['token'])) {
             <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
             <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
             <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-             <script>
+            <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>            
+            <script>
                 const toggleBtn = document.getElementById('toggle-view');
                 const sectionApercu = document.getElementById('section-apercu');
                 const sectionExplo = document.getElementById('section-exploration');
@@ -1652,6 +1657,156 @@ if (isset($_GET['token'])) {
                 checkOllamaStatus();
                 setInterval(checkOllamaStatus, 10000);
             });
+            </script>
+
+            <script>
+            function exporterHistoriquePDF() {
+                if (!window.jspdf) {
+                    alert("La librairie jsPDF n'est pas chargée.");
+                    return;
+                }
+
+                const { jsPDF } = window.jspdf;
+                const doc = new jsPDF('p', 'mm', 'a4');
+
+                const pageWidth = doc.internal.pageSize.width;
+                const pageHeight = doc.internal.pageSize.height;
+                const margin = 15;
+                const contentWidth = pageWidth - (margin * 2);
+
+                let y = 15;
+
+                // En-tête du document 
+                doc.setFont("helvetica", "bold");
+                doc.setFontSize(16);
+                doc.setTextColor(15, 23, 42);
+                doc.text("RAPPORT DE RECHERCHE", margin, y);
+                
+                y += 5;
+                doc.setFont("helvetica", "normal");
+                doc.setFontSize(8.5);
+                doc.setTextColor(100, 116, 139);
+                doc.text(`Export consolidé des analyses et des résultats système — ${new Date().toLocaleDateString('fr-FR')} à ${new Date().toLocaleTimeString('fr-FR')}`, margin, y);
+                
+                y += 6;
+                doc.setLineWidth(0.6);
+                doc.setDrawColor(59, 130, 246);
+                doc.line(margin, y, pageWidth - margin, y);
+                y += 10;
+
+                let count = 0;
+                const cartes = document.querySelectorAll('#section-apercu .col-12, #section-apercu .card');
+
+                if (cartes.length === 0) {
+                    alert("Aucune donnée à exporter.");
+                    return;
+                }
+
+                cartes.forEach(item => {
+                    const isVisible = window.getComputedStyle(item).display !== 'none' && !item.classList.contains('d-none');
+
+                    if (isVisible) {
+                        const btnVoir = item.querySelector('.btn-voir-resultat');
+                        
+                        if (btnVoir) {
+                            count++;
+                            const nom = btnVoir.getAttribute('data-nom') || 'Sans titre';
+                            const description = btnVoir.getAttribute('data-description') || 'Aucune description';
+                            const resume = btnVoir.getAttribute('data-resume') || 'Aucun résumé';
+                            const time = btnVoir.getAttribute('data-time') || '0';
+                            const tokens = btnVoir.getAttribute('data-tokens') || '0';
+                            const words = btnVoir.getAttribute('data-words') || '0';
+                            const tonalite = btnVoir.getAttribute('data-tonalite') || 'Non définie';
+
+                            doc.setFont("helvetica", "normal");
+                            doc.setFontSize(8.5);
+                            const splitResume = doc.splitTextToSize(resume, contentWidth - 12);
+                            const splitDesc = doc.splitTextToSize(description, contentWidth - 12);
+
+                            const headerHeight = 32; 
+                            const resumeBlockHeight = 5 + (splitResume.length * 4);
+                            const descTitleHeight = 9;
+                            const totalCardHeight = headerHeight + resumeBlockHeight + descTitleHeight + (splitDesc.length * 4) + 6;
+
+                            if (y + totalCardHeight > pageHeight - 15) {
+                                doc.addPage();
+                                y = 15;
+                            }
+
+                            let currentY = y + 7;
+
+                            // Encadré bleu pour le titre de la recherche
+                            doc.setFillColor(239, 246, 255); 
+                            doc.setDrawColor(59, 130, 246); 
+                            doc.setLineWidth(0.4);
+                            doc.roundedRect(margin, currentY - 5, contentWidth, 9, 1.5, 1.5, 'FD');
+
+                            // Texte du titre avec le format "1." au lieu de "#1"
+                            doc.setFont("helvetica", "bold");
+                            doc.setFontSize(10);
+                            doc.setTextColor(15, 23, 42);
+                            doc.text(`${count}.  ${nom}`, margin + 4, currentY + 1);
+
+                            // Tonalité alignée à droite dans l'encadré
+                            doc.setFont("helvetica", "bold");
+                            doc.setFontSize(7.5);
+                            doc.setTextColor(3, 105, 161);
+                            doc.text(`Tonalité : ${tonalite}`, pageWidth - margin - 4, currentY + 1, { align: 'right' });
+
+                            currentY += 10;
+
+                            // Métriques
+                            doc.setFont("helvetica", "normal");
+                            doc.setFontSize(7.5);
+                            doc.setTextColor(71, 85, 105);
+                            doc.text(`Latence : ${time} ms   •   Tokens : ${tokens}   •   Mots : ${words}`, margin + 4, currentY);
+
+                            // Résumé
+                            currentY += 6;
+                            doc.setFont("helvetica", "bold");
+                            doc.setFontSize(7.5);
+                            doc.setTextColor(100, 116, 139);
+                            doc.text("RÉSUMÉ", margin + 4, currentY);
+
+                            currentY += 4;
+                            doc.setFont("helvetica", "normal");
+                            doc.setFontSize(8.5);
+                            doc.setTextColor(51, 65, 85);
+                            doc.text(splitResume, margin + 4, currentY);
+                            currentY += resumeBlockHeight - 5 + 4;
+
+                            // Description
+                            doc.setFont("helvetica", "bold");
+                            doc.setFontSize(7.5);
+                            doc.setTextColor(100, 116, 139);
+                            
+                            if (currentY + 9 > pageHeight - 15) {
+                                doc.addPage();
+                                currentY = 15;
+                            }
+                            doc.text("DESCRIPTION / RÉSULTAT COMPLET", margin + 4, currentY + 4);
+                            currentY += 8;
+
+                            doc.setFont("helvetica", "normal");
+                            doc.setFontSize(8.5);
+                            doc.setTextColor(51, 65, 85);
+
+                            for (let i = 0; i < splitDesc.length; i++) {
+                                if (currentY > pageHeight - 15) {
+                                    doc.addPage();
+                                    currentY = 15;
+                                }
+                                doc.text(splitDesc[i], margin + 4, currentY);
+                                currentY += 4;
+                            }
+
+                            y = currentY + 10;
+                        }
+                    }
+                });
+
+                doc.save('rapport-recherche-design.pdf');
+            }
             </script>
         </body>
     </html>
